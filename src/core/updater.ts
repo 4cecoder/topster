@@ -39,7 +39,7 @@ async function checkCommand(command: string): Promise<boolean> {
   }
 }
 
-async function preflightChecks(): Promise<{ passed: boolean; error?: string }> {
+async function preflightChecks(repoDir: string): Promise<{ passed: boolean; error?: string }> {
   // Check for git
   if (!(await checkCommand('git'))) {
     return { passed: false, error: 'git is not installed or not in PATH' };
@@ -50,29 +50,85 @@ async function preflightChecks(): Promise<{ passed: boolean; error?: string }> {
     return { passed: false, error: 'bun is not installed or not in PATH' };
   }
 
+  // Check if we're in a git repo
+  if (!existsSync(join(repoDir, '.git'))) {
+    return { passed: false, error: 'Not a git repository' };
+  }
+
+  // Check if we have internet connectivity by trying to reach GitHub
+  try {
+    const proc = Bun.spawn(['git', 'ls-remote', '--exit-code', 'origin', 'HEAD'], {
+      cwd: repoDir,
+      stdout: 'ignore',
+      stderr: 'ignore',
+    });
+    await proc.exited;
+    if (proc.exitCode !== 0) {
+      return { passed: false, error: 'Cannot connect to remote repository (check network)' };
+    }
+  } catch {
+    return { passed: false, error: 'Cannot connect to remote repository' };
+  }
+
+  // Check if there are uncommitted changes that might conflict
+  try {
+    const status = await gitCommand(['status', '--porcelain'], repoDir);
+    const conflictFiles = status.split('\n').filter(line => {
+      // Check for merge conflicts or unmerged files
+      return line.startsWith('UU') || line.startsWith('AA') || line.startsWith('DD');
+    });
+    if (conflictFiles.length > 0) {
+      return { passed: false, error: 'Repository has merge conflicts, resolve them first' };
+    }
+  } catch {
+    return { passed: false, error: 'Cannot check git status' };
+  }
+
+  // Check if we have write permissions
+  try {
+    const testFile = join(repoDir, '.update-test');
+    await Bun.write(testFile, 'test');
+    const fs = await import('fs/promises');
+    await fs.unlink(testFile);
+  } catch {
+    return { passed: false, error: 'No write permission in repository directory' };
+  }
+
+  // Check disk space (at least 100MB free)
+  try {
+    const proc = Bun.spawn(['df', '-k', repoDir], {
+      stdout: 'pipe',
+      stderr: 'ignore',
+    });
+    const output = await new Response(proc.stdout).text();
+    await proc.exited;
+
+    const lines = output.trim().split('\n');
+    if (lines.length > 1) {
+      const parts = lines[1].split(/\s+/);
+      const available = parseInt(parts[3]); // Available space in KB
+      if (available < 102400) { // Less than 100MB
+        return { passed: false, error: 'Insufficient disk space (need at least 100MB)' };
+      }
+    }
+  } catch {
+    // Disk space check failed, but not critical - continue anyway
+  }
+
   return { passed: true };
 }
 
 export async function checkForUpdates(silent: boolean = true): Promise<UpdateResult> {
   try {
+    const repoDir = join(__dirname, '../..');
+
     // Run preflight checks
-    const preflight = await preflightChecks();
+    const preflight = await preflightChecks(repoDir);
     if (!preflight.passed) {
       return {
         updated: false,
         currentVersion: 'unknown',
         message: `Preflight check failed: ${preflight.error}`,
-      };
-    }
-
-    const repoDir = join(__dirname, '../..');
-
-    // Check if we're in a git repo
-    if (!existsSync(join(repoDir, '.git'))) {
-      return {
-        updated: false,
-        currentVersion: 'unknown',
-        message: 'Not a git repository',
       };
     }
 

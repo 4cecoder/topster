@@ -26,6 +26,10 @@ topster -u
    - Verifies `git` is installed and in PATH
    - Verifies `bun` is installed and in PATH
    - Confirms running from a git repository
+   - Tests network connectivity to remote repository
+   - Checks for merge conflicts in working tree
+   - Verifies write permissions in repository directory
+   - Ensures sufficient disk space (100MB minimum)
 2. **Update Check**:
    - Fetches latest from `origin/main`
    - Compares local vs remote commit hashes
