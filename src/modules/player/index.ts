@@ -40,9 +40,17 @@ export async function findPlayer(type: PlayerType): Promise<string | null> {
 export function buildMpvArgs(
   url: string,
   options: PlayerOptions,
-  subtitles?: Subtitle[]
+  subtitles?: Subtitle[],
+  referer?: string
 ): string[] {
   const args: string[] = [url];
+
+  // Add HTTP headers to bypass 403 errors
+  args.push('--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
+
+  if (referer) {
+    args.push(`--http-header-fields=Referer: ${referer}`);
+  }
 
   if (options.startTime && options.startTime > 0) {
     args.push(`--start=${options.startTime}`);
@@ -62,6 +70,11 @@ export function buildMpvArgs(
   // Additional useful mpv options
   args.push('--force-window=immediate');
   args.push('--keep-open=no');
+
+  // Network options for better streaming
+  args.push('--cache=yes');
+  args.push('--demuxer-max-bytes=50M');
+  args.push('--demuxer-max-back-bytes=20M');
 
   return args;
 }
@@ -95,7 +108,8 @@ export function buildVlcArgs(
 export function buildIinaArgs(
   url: string,
   options: PlayerOptions,
-  subtitles?: Subtitle[]
+  subtitles?: Subtitle[],
+  referer?: string
 ): string[] {
   const args: string[] = [];
 
@@ -107,6 +121,13 @@ export function buildIinaArgs(
 
   // Use -- to pass raw mpv options
   args.push('--');
+
+  // Add HTTP headers to bypass 403 errors
+  args.push('--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
+
+  if (referer) {
+    args.push(`--http-header-fields=Referer: ${referer}`);
+  }
 
   if (options.startTime && options.startTime > 0) {
     args.push(`--start=${options.startTime}`);
@@ -126,13 +147,19 @@ export function buildIinaArgs(
   args.push('--force-window=immediate');
   args.push('--keep-open=no');
 
+  // Network options for better streaming
+  args.push('--cache=yes');
+  args.push('--demuxer-max-bytes=50M');
+  args.push('--demuxer-max-back-bytes=20M');
+
   return args;
 }
 
 export async function play(
   url: string,
   options: PlayerOptions = {},
-  subtitles?: Subtitle[]
+  subtitles?: Subtitle[],
+  referer?: string
 ): Promise<PlaybackResult> {
   const playerType = getConfig().get('player');
   const playerBinary = await findPlayer(playerType);
@@ -144,13 +171,13 @@ export async function play(
   let args: string[];
   switch (playerType) {
     case 'mpv':
-      args = buildMpvArgs(url, options, subtitles);
+      args = buildMpvArgs(url, options, subtitles, referer);
       break;
     case 'vlc':
       args = buildVlcArgs(url, options, subtitles);
       break;
     case 'iina':
-      args = buildIinaArgs(url, options, subtitles);
+      args = buildIinaArgs(url, options, subtitles, referer);
       break;
     default:
       throw new PlayerError(`Unsupported player: ${playerType}`, playerType);

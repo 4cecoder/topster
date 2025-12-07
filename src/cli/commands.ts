@@ -262,7 +262,8 @@ async function playMedia(
         startTime: startTime > 60 ? startTime - 10 : 0,
         fullscreen: true,
       },
-      subtitles
+      subtitles,
+      firstVideoInfo.referer
     );
 
     // Update history with final position

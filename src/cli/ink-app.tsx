@@ -633,7 +633,8 @@ async function playMedia(
         startTime: startTime > 60 ? startTime - 10 : 0,
         fullscreen: true,
       },
-      subtitles
+      subtitles,
+      firstVideoInfo.referer
     );
 
     debugLog(`Playback finished. Exit code: ${result.exitCode}`);
