@@ -21,12 +21,14 @@ export const SeasonList: React.FC<SeasonListProps> = ({
   const selectItems = seasons.map((season) => ({
     label: `📺 ${season.title}`,
     value: season,
+    key: `season-${season.number}`,
   }));
 
   if (onCancel) {
     selectItems.push({
       label: '← Back',
       value: null as any,
+      key: 'cancel',
     });
   }
 

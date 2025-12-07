@@ -1,0 +1,149 @@
+diff --git a/src/cli/components/EpisodeList.tsx b/src/cli/components/EpisodeList.tsx
+index b672102..875bd64 100644
+--- a/src/cli/components/EpisodeList.tsx
++++ b/src/cli/components/EpisodeList.tsx
+@@ -23,12 +23,14 @@ export const EpisodeList: React.FC<EpisodeListProps> = ({
+   const selectItems = episodes.map((episode) => ({
+     label: `S${String(seasonNumber).padStart(2, '0')}E${String(episode.number).padStart(2, '0')} - ${episode.title}`,
+     value: episode,
++    key: `s${seasonNumber}e${episode.number}`,
+   }));
+ 
+   if (onCancel) {
+     selectItems.push({
+       label: '← Back',
+       value: null as any,
++      key: 'cancel',
+     });
+   }
+ 
+diff --git a/src/cli/components/Menu.tsx b/src/cli/components/Menu.tsx
+index eb90e02..aec6749 100644
+--- a/src/cli/components/Menu.tsx
++++ b/src/cli/components/Menu.tsx
+@@ -18,6 +18,7 @@ export const Menu: React.FC<MenuProps> = ({ title, items, onSelect }) => {
+   const selectItems = items.map((item) => ({
+     label: item.description ? `${item.label} - ${item.description}` : item.label,
+     value: item.value,
++    key: item.value,
+   }));
+ 
+   const handleSelect = (selected: { value: string }) => {
+diff --git a/src/cli/components/SeasonList.tsx b/src/cli/components/SeasonList.tsx
+index b26478e..2a040a4 100644
+--- a/src/cli/components/SeasonList.tsx
++++ b/src/cli/components/SeasonList.tsx
+@@ -21,12 +21,14 @@ export const SeasonList: React.FC<SeasonListProps> = ({
+   const selectItems = seasons.map((season) => ({
+     label: `📺 ${season.title}`,
+     value: season,
++    key: `season-${season.number}`,
+   }));
+ 
+   if (onCancel) {
+     selectItems.push({
+       label: '← Back',
+       value: null as any,
++      key: 'cancel',
+     });
+   }
+ 
+diff --git a/src/core/config.ts b/src/core/config.ts
+index 81a87af..dd12b0d 100644
+--- a/src/core/config.ts
++++ b/src/core/config.ts
+@@ -1,6 +1,6 @@
+ // Configuration management for Topster
+ 
+-import { homedir } from 'os';
++import { homedir, platform } from 'os';
+ import { join } from 'path';
+ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
+ import type { PlayerType, MediaType } from './types';
+@@ -37,10 +37,19 @@ export interface TopsterConfig {
+   mcpHost: string;
+ }
+ 
++// Detect the best default player based on platform
++function getDefaultPlayer(): PlayerType {
++  const p = platform();
++  if (p === 'darwin') {
++    return 'iina'; // macOS: use IINA
++  }
++  return 'mpv'; // Linux/Windows: use mpv
++}
++
+ const DEFAULT_CONFIG: TopsterConfig = {
+   baseUrl: 'https://flixhq.to',
+   provider: 'Vidcloud',
+-  player: 'mpv',
++  player: getDefaultPlayer(),
+   quality: '1080',
+   subsLanguage: 'english',
+   subtitlesEnabled: true,
+diff --git a/src/modules/player/index.ts b/src/modules/player/index.ts
+index d242e3c..ead9cd9 100644
+--- a/src/modules/player/index.ts
++++ b/src/modules/player/index.ts
+@@ -15,7 +15,7 @@ export interface PlaybackResult {
+ const PLAYER_BINARIES: Record<PlayerType, string[]> = {
+   mpv: ['mpv'],
+   vlc: ['vlc', 'cvlc'],
+-  iina: ['/Applications/IINA.app/Contents/MacOS/iina-cli', 'iina'],
++  iina: ['/Applications/IINA.app/Contents/MacOS/iina-cli'],
+   internal: [],
+ };
+ 
+@@ -92,6 +92,43 @@ export function buildVlcArgs(
+   return args;
+ }
+ 
++export function buildIinaArgs(
++  url: string,
++  options: PlayerOptions,
++  subtitles?: Subtitle[]
++): string[] {
++  const args: string[] = [];
++
++  // IINA CLI requires --keep-running to wait for playback to finish
++  args.push('--keep-running');
++
++  // Add the URL/file
++  args.push(url);
++
++  // Use -- to pass raw mpv options
++  args.push('--');
++
++  if (options.startTime && options.startTime > 0) {
++    args.push(`--start=${options.startTime}`);
++  }
++
++  if (options.fullscreen) {
++    args.push('--fullscreen');
++  }
++
++  if (options.subtitleFile) {
++    args.push(`--sub-file=${options.subtitleFile}`);
++  } else if (subtitles && subtitles.length > 0 && subtitles[0]) {
++    args.push(`--sub-file=${subtitles[0].url}`);
++  }
++
++  // Additional mpv options for better playback
++  args.push('--force-window=immediate');
++  args.push('--keep-open=no');
++
++  return args;
++}
++
+ export async function play(
+   url: string,
+   options: PlayerOptions = {},
+@@ -113,7 +150,7 @@ export async function play(
+       args = buildVlcArgs(url, options, subtitles);
+       break;
+     case 'iina':
+-      args = buildMpvArgs(url, options, subtitles); // IINA uses mpv-compatible args
++      args = buildIinaArgs(url, options, subtitles);
+       break;
+     default:
+       throw new PlayerError(`Unsupported player: ${playerType}`, playerType);

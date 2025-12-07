@@ -23,12 +23,14 @@ export const EpisodeList: React.FC<EpisodeListProps> = ({
   const selectItems = episodes.map((episode) => ({
     label: `S${String(seasonNumber).padStart(2, '0')}E${String(episode.number).padStart(2, '0')} - ${episode.title}`,
     value: episode,
+    key: `s${seasonNumber}e${episode.number}`,
   }));
 
   if (onCancel) {
     selectItems.push({
       label: '← Back',
       value: null as any,
+      key: 'cancel',
     });
   }
 

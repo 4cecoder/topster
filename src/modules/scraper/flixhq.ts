@@ -15,6 +15,7 @@ import type {
   Subtitle,
 } from '../../core/types';
 import { getConfig } from '../../core/config';
+import { searchCache, mediaCache, episodeCache } from '../cache';
 
 interface SourceResponse {
   type: string;
@@ -43,8 +44,14 @@ export class FlixHQProvider implements Provider {
     this.baseUrl = baseUrl || getConfig().get('baseUrl');
   }
 
-  async search(query: string): Promise<SearchResult> {
-    const searchUrl = `${this.baseUrl}/search/${encodeURIComponent(query.replace(/\s+/g, '-'))}`;
+  async search(query: string, page: number = 1): Promise<SearchResult> {
+    const cacheKey = `search:${query}:${page}`;
+    const cached = searchCache.get(cacheKey);
+    if (cached) {
+      return cached;
+    }
+
+    const searchUrl = `${this.baseUrl}/search/${encodeURIComponent(query.replace(/\s+/g, '-'))}?page=${page}`;
     const html = await fetchHtml(searchUrl);
     const $ = cheerio.load(html);
 
@@ -88,15 +95,33 @@ export class FlixHQProvider implements Provider {
       }
     });
 
-    if (items.length === 0) {
+    if (items.length === 0 && page === 1) {
       throw new NoResultsError(query);
     }
 
-    return { items };
+    // Parse pagination info
+    const paginationNav = $('.pagination');
+    const totalPages = this.parseTotalPages($, paginationNav);
+
+    const result: SearchResult = {
+      items,
+      currentPage: page,
+      totalPages,
+    };
+
+    searchCache.set(cacheKey, result);
+    return result;
   }
 
-  async getTrending(): Promise<MediaItem[]> {
-    const html = await fetchHtml(`${this.baseUrl}/home`);
+  async getTrending(page: number = 1): Promise<SearchResult> {
+    const cacheKey = `trending:${page}`;
+    const cached = mediaCache.get(cacheKey);
+    if (cached) {
+      return cached;
+    }
+
+    const url = page === 1 ? `${this.baseUrl}/home` : `${this.baseUrl}/home?page=${page}`;
+    const html = await fetchHtml(url);
     const $ = cheerio.load(html);
 
     const items: MediaItem[] = [];
@@ -106,12 +131,29 @@ export class FlixHQProvider implements Provider {
       if (item) items.push(item);
     });
 
-    return items;
+    const paginationNav = $('.pagination');
+    const totalPages = this.parseTotalPages($, paginationNav);
+
+    const result: SearchResult = {
+      items,
+      currentPage: page,
+      totalPages,
+    };
+
+    mediaCache.set(cacheKey, result);
+    return result;
   }
 
-  async getRecent(type: MediaType): Promise<MediaItem[]> {
+  async getRecent(type: MediaType, page: number = 1): Promise<SearchResult> {
+    const cacheKey = `recent:${type}:${page}`;
+    const cached = mediaCache.get(cacheKey);
+    if (cached) {
+      return cached;
+    }
+
     const path = type === 'movie' ? '/movie' : '/tv-show';
-    const html = await fetchHtml(`${this.baseUrl}${path}`);
+    const url = `${this.baseUrl}${path}${page > 1 ? `?page=${page}` : ''}`;
+    const html = await fetchHtml(url);
     const $ = cheerio.load(html);
 
     const items: MediaItem[] = [];
@@ -121,10 +163,26 @@ export class FlixHQProvider implements Provider {
       if (item) items.push(item);
     });
 
-    return items;
+    const paginationNav = $('.pagination');
+    const totalPages = this.parseTotalPages($, paginationNav);
+
+    const result: SearchResult = {
+      items,
+      currentPage: page,
+      totalPages,
+    };
+
+    mediaCache.set(cacheKey, result);
+    return result;
   }
 
   async getSeasons(mediaId: string): Promise<Season[]> {
+    const cacheKey = `seasons:${mediaId}`;
+    const cached = episodeCache.get(cacheKey);
+    if (cached) {
+      return cached;
+    }
+
     const html = await fetchHtml(`${this.baseUrl}/ajax/v2/tv/seasons/${mediaId}`, {
       headers: { 'X-Requested-With': 'XMLHttpRequest' },
     });
@@ -143,10 +201,17 @@ export class FlixHQProvider implements Provider {
       }
     });
 
+    episodeCache.set(cacheKey, seasons);
     return seasons;
   }
 
   async getEpisodes(seasonId: string): Promise<Episode[]> {
+    const cacheKey = `episodes:${seasonId}`;
+    const cached = episodeCache.get(cacheKey);
+    if (cached) {
+      return cached;
+    }
+
     const html = await fetchHtml(`${this.baseUrl}/ajax/v2/season/episodes/${seasonId}`, {
       headers: { 'X-Requested-With': 'XMLHttpRequest' },
     });
@@ -166,6 +231,7 @@ export class FlixHQProvider implements Provider {
       }
     });
 
+    episodeCache.set(cacheKey, episodes);
     return episodes;
   }
 
@@ -361,6 +427,22 @@ export class FlixHQProvider implements Provider {
   private extractId(url: string): string {
     const match = url.match(/\-(\d+)$/);
     return match?.[1] ?? '';
+  }
+
+  private parseTotalPages($: cheerio.CheerioAPI, paginationNav: cheerio.Cheerio<any>): number | undefined {
+    if (!paginationNav.length) return undefined;
+
+    // Look for the last page number in pagination
+    let maxPage = 1;
+    paginationNav.find('a').each((_, element) => {
+      const text = $(element).text().trim();
+      const pageNum = parseInt(text);
+      if (!isNaN(pageNum) && pageNum > maxPage) {
+        maxPage = pageNum;
+      }
+    });
+
+    return maxPage > 1 ? maxPage : undefined;
   }
 }
 

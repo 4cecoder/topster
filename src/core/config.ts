@@ -1,6 +1,6 @@
 // Configuration management for Topster
 
-import { homedir } from 'os';
+import { homedir, platform } from 'os';
 import { join } from 'path';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
 import type { PlayerType, MediaType } from './types';
@@ -37,10 +37,19 @@ export interface TopsterConfig {
   mcpHost: string;
 }
 
+// Detect the best default player based on platform
+function getDefaultPlayer(): PlayerType {
+  const p = platform();
+  if (p === 'darwin') {
+    return 'iina'; // macOS: use IINA
+  }
+  return 'mpv'; // Linux/Windows: use mpv
+}
+
 const DEFAULT_CONFIG: TopsterConfig = {
   baseUrl: 'https://flixhq.to',
   provider: 'Vidcloud',
-  player: 'mpv',
+  player: getDefaultPlayer(),
   quality: '1080',
   subsLanguage: 'english',
   subtitlesEnabled: true,

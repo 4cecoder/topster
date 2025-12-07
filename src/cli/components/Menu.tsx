@@ -18,6 +18,7 @@ export const Menu: React.FC<MenuProps> = ({ title, items, onSelect }) => {
   const selectItems = items.map((item) => ({
     label: item.description ? `${item.label} - ${item.description}` : item.label,
     value: item.value,
+    key: item.value,
   }));
 
   const handleSelect = (selected: { value: string }) => {

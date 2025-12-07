@@ -10,6 +10,7 @@ import { EpisodeList, type Episode } from './components/EpisodeList.js';
 import { HistoryList } from './components/HistoryList.js';
 import { LoadingSpinner } from './components/LoadingSpinner.js';
 import { StatusMessage } from './components/StatusMessage.js';
+import { Settings } from './components/Settings.js';
 import type { MediaItem } from '../core/types.js';
 import type { HistoryEntry } from '../modules/history/types.js';
 import { getDefaultProvider } from '../modules/scraper/index.js';
@@ -17,6 +18,7 @@ import { getHistory } from '../modules/history/index.js';
 import { play } from '../modules/player/index.js';
 import { downloadMedia } from '../modules/download/index.js';
 import { getDiscord } from '../modules/discord/index.js';
+import { getConfig } from '../core/config.js';
 import type { CommandContext } from './commands.js';
 import { writeFileSync, appendFileSync } from 'fs';
 import { homedir } from 'os';
@@ -24,6 +26,7 @@ import { join } from 'path';
 
 const provider = getDefaultProvider();
 const history = getHistory();
+const config = getConfig();
 
 // Debug logging
 const LOG_FILE = join(homedir(), '.topster', 'debug.log');
@@ -45,6 +48,7 @@ type Screen =
   | 'trending'
   | 'recent'
   | 'history'
+  | 'settings'
   | 'season-select'
   | 'episode-select'
   | 'loading'
@@ -54,8 +58,14 @@ interface AppState {
   screen: Screen;
   searchQuery?: string;
   searchResults?: MediaItem[];
+  searchPage?: number;
+  searchTotalPages?: number;
   trendingItems?: MediaItem[];
+  trendingPage?: number;
+  trendingTotalPages?: number;
   recentItems?: MediaItem[];
+  recentPage?: number;
+  recentTotalPages?: number;
   historyEntries?: HistoryEntry[];
   selectedMedia?: MediaItem;
   seasons?: Season[];
@@ -109,16 +119,18 @@ const InkApp: React.FC<{ ctx: CommandContext }> = ({ ctx }) => {
     }
   };
 
-  const handleSearch = async (query: string) => {
+  const handleSearch = async (query: string, page: number = 1) => {
     try {
-      debugLog(`Searching for: ${query}`);
-      updateState({ screen: 'loading', loadingMessage: 'Searching...', breadcrumbs: [...state.breadcrumbs, 'Results'] });
-      const result = await provider.search(query);
-      debugLog(`Found ${result.items.length} results`);
+      debugLog(`Searching for: ${query} (page ${page})`);
+      updateState({ screen: 'loading', loadingMessage: 'Searching...', breadcrumbs: state.breadcrumbs.includes('Results') ? state.breadcrumbs : [...state.breadcrumbs, 'Results'] });
+      const result = await provider.search(query, page);
+      debugLog(`Found ${result.items.length} results (page ${result.currentPage}/${result.totalPages || 1})`);
       updateState({
         screen: 'search-results',
         searchQuery: query,
         searchResults: result.items,
+        searchPage: result.currentPage,
+        searchTotalPages: result.totalPages,
       });
     } catch (error) {
       debugLog(`Search error: ${error}`);
@@ -129,13 +141,15 @@ const InkApp: React.FC<{ ctx: CommandContext }> = ({ ctx }) => {
     }
   };
 
-  const handleTrending = async () => {
+  const handleTrending = async (page: number = 1) => {
     try {
-      updateState({ screen: 'loading', loadingMessage: 'Loading trending content...', breadcrumbs: [...state.breadcrumbs, 'Trending'] });
-      const items = await provider.getTrending();
+      updateState({ screen: 'loading', loadingMessage: 'Loading trending content...', breadcrumbs: state.breadcrumbs.includes('Trending') ? state.breadcrumbs : [...state.breadcrumbs, 'Trending'] });
+      const result = await provider.getTrending(page);
       updateState({
         screen: 'trending',
-        trendingItems: items,
+        trendingItems: result.items,
+        trendingPage: result.currentPage,
+        trendingTotalPages: result.totalPages,
       });
     } catch (error) {
       updateState({
@@ -145,13 +159,15 @@ const InkApp: React.FC<{ ctx: CommandContext }> = ({ ctx }) => {
     }
   };
 
-  const handleRecent = async () => {
+  const handleRecent = async (page: number = 1) => {
     try {
-      updateState({ screen: 'loading', loadingMessage: 'Loading recent content...', breadcrumbs: [...state.breadcrumbs, 'Recent'] });
-      const items = await provider.getRecent('movie');
+      updateState({ screen: 'loading', loadingMessage: 'Loading recent content...', breadcrumbs: state.breadcrumbs.includes('Recent') ? state.breadcrumbs : [...state.breadcrumbs, 'Recent'] });
+      const result = await provider.getRecent('movie', page);
       updateState({
         screen: 'recent',
-        recentItems: items,
+        recentItems: result.items,
+        recentPage: result.currentPage,
+        recentTotalPages: result.totalPages,
       });
     } catch (error) {
       updateState({
@@ -276,6 +292,7 @@ const InkApp: React.FC<{ ctx: CommandContext }> = ({ ctx }) => {
                 { label: '🔥 Trending', value: 'trending', description: 'Browse trending content' },
                 { label: '🆕 Recent', value: 'recent', description: 'Browse recent releases' },
                 { label: '📜 Continue Watching', value: 'history', description: 'Resume from watch history' },
+                { label: '⚙️  Settings', value: 'settings', description: 'Configure Topster' },
                 { label: '❌ Exit', value: 'exit', description: 'Quit the application' },
               ]}
               onSelect={async (value) => {
@@ -285,6 +302,8 @@ const InkApp: React.FC<{ ctx: CommandContext }> = ({ ctx }) => {
                   process.exit(0);
                 } else if (value === 'trending') {
                   await handleTrending();
+                } else if (value === 'settings') {
+                  updateState({ screen: 'settings', breadcrumbs: [...state.breadcrumbs, 'Settings'] });
                 } else if (value === 'recent') {
                   await handleRecent();
                 } else if (value === 'history') {
@@ -319,6 +338,10 @@ const InkApp: React.FC<{ ctx: CommandContext }> = ({ ctx }) => {
                 items={state.searchResults}
                 onSelect={handleSelectMedia}
                 onCancel={handleBack}
+                currentPage={state.searchPage}
+                totalPages={state.searchTotalPages}
+                onNextPage={() => state.searchQuery && handleSearch(state.searchQuery, (state.searchPage || 1) + 1)}
+                onPrevPage={() => state.searchQuery && handleSearch(state.searchQuery, (state.searchPage || 1) - 1)}
               />
             )}
           </>
@@ -335,6 +358,10 @@ const InkApp: React.FC<{ ctx: CommandContext }> = ({ ctx }) => {
                 items={state.trendingItems}
                 onSelect={handleSelectMedia}
                 onCancel={handleBack}
+                currentPage={state.trendingPage}
+                totalPages={state.trendingTotalPages}
+                onNextPage={() => handleTrending((state.trendingPage || 1) + 1)}
+                onPrevPage={() => handleTrending((state.trendingPage || 1) - 1)}
               />
             )}
           </>
@@ -351,6 +378,10 @@ const InkApp: React.FC<{ ctx: CommandContext }> = ({ ctx }) => {
                 items={state.recentItems}
                 onSelect={handleSelectMedia}
                 onCancel={handleBack}
+                currentPage={state.recentPage}
+                totalPages={state.recentTotalPages}
+                onNextPage={() => handleRecent((state.recentPage || 1) + 1)}
+                onPrevPage={() => handleRecent((state.recentPage || 1) - 1)}
               />
             )}
           </>
@@ -368,6 +399,21 @@ const InkApp: React.FC<{ ctx: CommandContext }> = ({ ctx }) => {
                 onCancel={handleBack}
               />
             )}
+          </>
+        );
+
+      case 'settings':
+        return (
+          <>
+            <Header />
+            <Breadcrumbs items={state.breadcrumbs} />
+            <Settings
+              config={config.getAll()}
+              onUpdate={(key, value) => {
+                config.set(key, value);
+              }}
+              onBack={handleBack}
+            />
           </>
         );
 

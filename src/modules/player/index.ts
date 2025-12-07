@@ -15,7 +15,7 @@ export interface PlaybackResult {
 const PLAYER_BINARIES: Record<PlayerType, string[]> = {
   mpv: ['mpv'],
   vlc: ['vlc', 'cvlc'],
-  iina: ['/Applications/IINA.app/Contents/MacOS/iina-cli', 'iina'],
+  iina: ['/Applications/IINA.app/Contents/MacOS/iina-cli'],
   internal: [],
 };
 
@@ -92,6 +92,43 @@ export function buildVlcArgs(
   return args;
 }
 
+export function buildIinaArgs(
+  url: string,
+  options: PlayerOptions,
+  subtitles?: Subtitle[]
+): string[] {
+  const args: string[] = [];
+
+  // IINA CLI requires --keep-running to wait for playback to finish
+  args.push('--keep-running');
+
+  // Add the URL/file
+  args.push(url);
+
+  // Use -- to pass raw mpv options
+  args.push('--');
+
+  if (options.startTime && options.startTime > 0) {
+    args.push(`--start=${options.startTime}`);
+  }
+
+  if (options.fullscreen) {
+    args.push('--fullscreen');
+  }
+
+  if (options.subtitleFile) {
+    args.push(`--sub-file=${options.subtitleFile}`);
+  } else if (subtitles && subtitles.length > 0 && subtitles[0]) {
+    args.push(`--sub-file=${subtitles[0].url}`);
+  }
+
+  // Additional mpv options for better playback
+  args.push('--force-window=immediate');
+  args.push('--keep-open=no');
+
+  return args;
+}
+
 export async function play(
   url: string,
   options: PlayerOptions = {},
@@ -113,7 +150,7 @@ export async function play(
       args = buildVlcArgs(url, options, subtitles);
       break;
     case 'iina':
-      args = buildMpvArgs(url, options, subtitles); // IINA uses mpv-compatible args
+      args = buildIinaArgs(url, options, subtitles);
       break;
     default:
       throw new PlayerError(`Unsupported player: ${playerType}`, playerType);

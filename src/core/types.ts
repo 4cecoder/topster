@@ -130,9 +130,9 @@ export interface PlayerOptions {
 export interface Provider {
   name: string;
   baseUrl: string;
-  search: (query: string) => Promise<SearchResult>;
-  getTrending: () => Promise<MediaItem[]>;
-  getRecent: (type: MediaType) => Promise<MediaItem[]>;
+  search: (query: string, page?: number) => Promise<SearchResult>;
+  getTrending: (page?: number) => Promise<SearchResult>;
+  getRecent: (type: MediaType, page?: number) => Promise<SearchResult>;
   getSeasons: (mediaId: string) => Promise<Season[]>;
   getEpisodes: (seasonId: string) => Promise<Episode[]>;
   getVideoSources: (id: string, isEpisode?: boolean) => Promise<VideoSource[]>;
