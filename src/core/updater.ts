@@ -26,8 +26,45 @@ async function gitCommand(args: string[], cwd: string): Promise<string> {
   return output.trim();
 }
 
+async function checkCommand(command: string): Promise<boolean> {
+  try {
+    const proc = Bun.spawn(['which', command], {
+      stdout: 'pipe',
+      stderr: 'ignore',
+    });
+    await proc.exited;
+    return proc.exitCode === 0;
+  } catch {
+    return false;
+  }
+}
+
+async function preflightChecks(): Promise<{ passed: boolean; error?: string }> {
+  // Check for git
+  if (!(await checkCommand('git'))) {
+    return { passed: false, error: 'git is not installed or not in PATH' };
+  }
+
+  // Check for bun
+  if (!(await checkCommand('bun'))) {
+    return { passed: false, error: 'bun is not installed or not in PATH' };
+  }
+
+  return { passed: true };
+}
+
 export async function checkForUpdates(silent: boolean = true): Promise<UpdateResult> {
   try {
+    // Run preflight checks
+    const preflight = await preflightChecks();
+    if (!preflight.passed) {
+      return {
+        updated: false,
+        currentVersion: 'unknown',
+        message: `Preflight check failed: ${preflight.error}`,
+      };
+    }
+
     const repoDir = join(__dirname, '../..');
 
     // Check if we're in a git repo
@@ -67,29 +104,57 @@ export async function checkForUpdates(silent: boolean = true): Promise<UpdateRes
       await gitCommand(['stash', 'push', '-m', `auto-update-stash-${Date.now()}`], repoDir);
     }
 
-    // Pull latest
-    await gitCommand(['pull', 'origin', 'main'], repoDir);
+    // Save current commit for potential rollback
+    const previousHash = localHash;
 
-    // Rebuild
-    if (!silent) {
-      console.log('Rebuilding...');
+    try {
+      // Pull latest
+      await gitCommand(['pull', 'origin', 'main'], repoDir);
+
+      // Rebuild
+      if (!silent) {
+        console.log('Rebuilding...');
+      }
+
+      const installProc = Bun.spawn(['bun', 'install'], {
+        cwd: repoDir,
+        stdout: 'ignore',
+        stderr: 'pipe',
+      });
+      await installProc.exited;
+
+      if (installProc.exitCode !== 0) {
+        const error = await new Response(installProc.stderr).text();
+        throw new Error(`bun install failed: ${error}`);
+      }
+
+      const buildProc = Bun.spawn(['bun', 'run', 'build'], {
+        cwd: repoDir,
+        stdout: 'ignore',
+        stderr: 'pipe',
+      });
+      await buildProc.exited;
+
+      if (buildProc.exitCode !== 0) {
+        const error = await new Response(buildProc.stderr).text();
+        throw new Error(`build failed: ${error}`);
+      }
+    } catch (error) {
+      // Rollback on failure
+      if (!silent) {
+        console.log('Update failed, rolling back...');
+      }
+      await gitCommand(['reset', '--hard', previousHash], repoDir);
+
+      // Restore stash if we created one
+      if (hasChanges) {
+        await gitCommand(['stash', 'pop'], repoDir);
+      }
+
+      throw error;
     }
 
-    const installProc = Bun.spawn(['bun', 'install'], {
-      cwd: repoDir,
-      stdout: 'ignore',
-      stderr: 'ignore',
-    });
-    await installProc.exited;
-
-    const buildProc = Bun.spawn(['bun', 'run', 'build'], {
-      cwd: repoDir,
-      stdout: 'ignore',
-      stderr: 'ignore',
-    });
-    await buildProc.exited;
-
-    // Restore stash
+    // Restore stash on success
     if (hasChanges) {
       await gitCommand(['stash', 'pop'], repoDir);
     }
