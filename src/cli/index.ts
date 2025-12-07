@@ -26,6 +26,7 @@ export function createCli(): Command {
     .option('--discord', 'Enable Discord Rich Presence')
     .option('--config', 'Show configuration')
     .option('-e, --edit', 'Edit configuration file')
+    .option('-u, --update', 'Check for and install updates')
     .option('-x, --debug', 'Enable debug output')
     .option('--dry-run', 'Show details without playing video')
     .option('--mcp', 'Start MCP server mode')
@@ -72,6 +73,11 @@ export function createCli(): Command {
 
       if (options.edit) {
         await commands.editConfig();
+        return;
+      }
+
+      if (options.update) {
+        await commands.updateApp();
         return;
       }
 

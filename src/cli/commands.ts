@@ -317,3 +317,24 @@ export async function editConfig(): Promise<void> {
 
   ui.printSuccess('Configuration updated');
 }
+
+export async function updateApp(): Promise<void> {
+  const { checkForUpdates } = await import('../core/updater');
+
+  ui.printHeader('Checking for updates...');
+
+  try {
+    const result = await checkForUpdates(false);
+
+    if (result.updated) {
+      ui.printSuccess(`✓ Updated to version ${result.currentVersion}`);
+      ui.printInfo('Restart Topster to use the new version');
+    } else if (result.message.includes('Already up to date')) {
+      ui.printSuccess(`✓ Already on latest version (${result.currentVersion})`);
+    } else {
+      ui.printError(`Update failed: ${result.message}`);
+    }
+  } catch (error) {
+    ui.printError(`Update error: ${error}`);
+  }
+}
