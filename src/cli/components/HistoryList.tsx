@@ -15,9 +15,8 @@ export const HistoryList: React.FC<HistoryListProps> = ({
   onCancel,
 }) => {
   const formatProgress = (entry: HistoryEntry): string => {
-    if (entry.currentTime && entry.duration) {
-      const progress = Math.round((entry.currentTime / entry.duration) * 100);
-      return `[${progress}%]`;
+    if (entry.percentWatched > 0) {
+      return `[${Math.round(entry.percentWatched)}%]`;
     }
     return '';
   };
@@ -27,8 +26,8 @@ export const HistoryList: React.FC<HistoryListProps> = ({
     const title = entry.title;
     const progress = formatProgress(entry);
 
-    if (entry.type === 'tv' && entry.season && entry.episode) {
-      return `${icon} ${title} S${String(entry.season).padStart(2, '0')}E${String(entry.episode).padStart(2, '0')} ${progress}`;
+    if (entry.type === 'tv' && entry.seasonNumber && entry.episodeNumber) {
+      return `${icon} ${title} S${String(entry.seasonNumber).padStart(2, '0')}E${String(entry.episodeNumber).padStart(2, '0')} ${progress}`;
     }
 
     return `${icon} ${title} ${progress}`;

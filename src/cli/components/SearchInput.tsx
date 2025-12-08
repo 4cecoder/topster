@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Box, Text } from 'ink';
+import { Box, Text, useInput } from 'ink';
 import TextInput from 'ink-text-input';
 
 interface SearchInputProps {
@@ -14,6 +14,13 @@ export const SearchInput: React.FC<SearchInputProps> = ({
   onCancel,
 }) => {
   const [query, setQuery] = useState('');
+
+  // Handle ESC key for back navigation
+  useInput((input, key) => {
+    if (key.escape && onCancel) {
+      onCancel();
+    }
+  });
 
   const handleSubmit = () => {
     if (query.trim()) {
@@ -40,7 +47,7 @@ export const SearchInput: React.FC<SearchInputProps> = ({
         />
       </Box>
       <Box marginTop={1}>
-        <Text dimColor>Press Enter to search, Ctrl+C to cancel</Text>
+        <Text dimColor>Press Enter to search, ESC to go back</Text>
       </Box>
     </Box>
   );
