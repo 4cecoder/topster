@@ -18,6 +18,8 @@ import { getConfig } from '../../core/config';
 import { searchCache, mediaCache, episodeCache } from '../cache';
 import { extractMegaCloud } from './extractors/megacloud';
 import { extractVidCloud } from './extractors/vidcloud';
+import { extractRapidCloud } from './extractors/rapidcloud';
+import { extractStreamSB } from './extractors/streamsb';
 
 interface SourceResponse {
   type: string;
@@ -281,14 +283,23 @@ export class FlixHQProvider implements Provider {
     // Log available servers
     console.log(`Available servers: ${servers.map(s => s.name).join(', ')}`);
 
-    // Sort servers to prioritize MegaCloud, then preferred provider
+    // Sort servers to prioritize MegaCloud, RapidCloud, then preferred provider
     servers.sort((a, b) => {
+      const aLower = a.name.toLowerCase();
+      const bLower = b.name.toLowerCase();
+
       // Always prefer MegaCloud first
-      if (a.name.toLowerCase().includes('megacloud')) return -1;
-      if (b.name.toLowerCase().includes('megacloud')) return 1;
+      if (aLower.includes('megacloud')) return -1;
+      if (bLower.includes('megacloud')) return 1;
+
+      // Then prefer RapidCloud/RabbitStream
+      if (aLower.includes('rapidcloud') || aLower.includes('rabbitstream')) return -1;
+      if (bLower.includes('rapidcloud') || bLower.includes('rabbitstream')) return 1;
+
       // Then check preferred provider
-      if (a.name.toLowerCase().includes(preferredProvider.toLowerCase())) return -1;
-      if (b.name.toLowerCase().includes(preferredProvider.toLowerCase())) return 1;
+      if (aLower.includes(preferredProvider.toLowerCase())) return -1;
+      if (bLower.includes(preferredProvider.toLowerCase())) return 1;
+
       return 0;
     });
 
@@ -353,6 +364,18 @@ export class FlixHQProvider implements Provider {
       if (serverLower.includes('megacloud')) {
         console.log(`Using MegaCloud extractor for ${serverName}`);
         return await extractMegaCloud(embedUrl, this.baseUrl);
+      }
+
+      // Try RapidCloud extractor for RapidCloud/RabbitStream servers
+      if (serverLower.includes('rapidcloud') || serverLower.includes('rabbitstream')) {
+        console.log(`Using RapidCloud extractor for ${serverName}`);
+        return await extractRapidCloud(embedUrl, this.baseUrl);
+      }
+
+      // Try StreamSB extractor for StreamSB servers
+      if (serverLower.includes('streamsb') || serverLower.includes('watchsb') || serverLower.includes('sbplay')) {
+        console.log(`Using StreamSB extractor for ${serverName}`);
+        return await extractStreamSB(embedUrl, this.baseUrl);
       }
 
       // Try VidCloud extractor for VidCloud and UpCloud servers
