@@ -16,6 +16,8 @@ import type {
 } from '../../core/types';
 import { getConfig } from '../../core/config';
 import { searchCache, mediaCache, episodeCache } from '../cache';
+import { extractMegaCloud } from './extractors/megacloud';
+import { extractVidCloud } from './extractors/vidcloud';
 
 interface SourceResponse {
   type: string;
@@ -28,13 +30,6 @@ interface ServerInfo {
   id: string;
   name: string;
 }
-
-interface DecryptedResponse {
-  sources?: Array<{ file: string; type?: string }>;
-  tracks?: Array<{ file: string; kind: string; label: string }>;
-}
-
-const DECRYPT_API_URL = 'https://dec.eatmynerds.live';
 
 export class FlixHQProvider implements Provider {
   name = 'FlixHQ';
@@ -283,16 +278,25 @@ export class FlixHQProvider implements Provider {
     const sources: VideoSource[] = [];
     const preferredProvider = getConfig().get('provider');
 
-    // Sort servers to prioritize preferred provider
+    // Log available servers
+    console.log(`Available servers: ${servers.map(s => s.name).join(', ')}`);
+
+    // Sort servers to prioritize MegaCloud, then preferred provider
     servers.sort((a, b) => {
+      // Always prefer MegaCloud first
+      if (a.name.toLowerCase().includes('megacloud')) return -1;
+      if (b.name.toLowerCase().includes('megacloud')) return 1;
+      // Then check preferred provider
       if (a.name.toLowerCase().includes(preferredProvider.toLowerCase())) return -1;
       if (b.name.toLowerCase().includes(preferredProvider.toLowerCase())) return 1;
       return 0;
     });
 
+    console.log(`Trying servers in order: ${servers.map(s => s.name).join(' → ')}`);
+
     for (const server of servers) {
       try {
-        const sourceData = await this.getSourceFromServer(server.id);
+        const sourceData = await this.getSourceFromServer(server.id, server.name);
         if (sourceData.length > 0) {
           sources.push({
             provider: server.name,
@@ -310,7 +314,7 @@ export class FlixHQProvider implements Provider {
     return sources;
   }
 
-  private async getSourceFromServer(serverId: string): Promise<VideoInfo[]> {
+  private async getSourceFromServer(serverId: string, serverName: string): Promise<VideoInfo[]> {
     // Get embed link from /ajax/episode/sources/{episode_id}
     const response = await fetchJson<SourceResponse>(
       `${this.baseUrl}/ajax/episode/sources/${serverId}`,
@@ -318,7 +322,8 @@ export class FlixHQProvider implements Provider {
     );
 
     if (response.type === 'iframe' && response.link) {
-      return this.extractFromEmbed(response.link);
+      console.log(`Server: ${serverName}, Embed URL: ${response.link}`);
+      return this.extractFromEmbed(response.link, serverName);
     }
 
     if (response.sources && response.sources.length > 0) {
@@ -339,52 +344,30 @@ export class FlixHQProvider implements Provider {
     return [];
   }
 
-  private async extractFromEmbed(embedUrl: string): Promise<VideoInfo[]> {
-    // Use the decryption API to extract video sources from embed
-    // Retry up to 3 times since the API can be flaky
-    const maxRetries = 3;
-    let lastError: unknown;
+  private async extractFromEmbed(embedUrl: string, serverName: string): Promise<VideoInfo[]> {
+    // Use the appropriate extractor based on server name
+    const serverLower = serverName.toLowerCase();
 
-    for (let attempt = 1; attempt <= maxRetries; attempt++) {
-      try {
-        const decryptUrl = `${DECRYPT_API_URL}/?url=${encodeURIComponent(embedUrl)}`;
-        const response = await fetchJson<DecryptedResponse>(decryptUrl);
-
-        if (response.sources && response.sources.length > 0) {
-          const m3u8Sources = response.sources.filter(s => s.file && s.file.includes('.m3u8'));
-
-          if (m3u8Sources.length > 0) {
-            const subtitles: Subtitle[] = (response.tracks || [])
-              .filter(t => t.kind === 'captions' || t.kind === 'subtitles')
-              .map(t => ({
-                url: t.file,
-                lang: t.label?.toLowerCase() || 'unknown',
-                label: t.label || 'Unknown',
-              }));
-
-            return m3u8Sources.map(s => ({
-              url: s.file,
-              subtitles,
-              referer: this.baseUrl,
-            }));
-          }
-        }
-
-        // API returned empty sources, retry after a short delay
-        if (attempt < maxRetries) {
-          await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
-        }
-      } catch (error) {
-        lastError = error;
-        if (attempt < maxRetries) {
-          await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
-        }
+    try {
+      // Try MegaCloud extractor for MegaCloud servers
+      if (serverLower.includes('megacloud')) {
+        console.log(`Using MegaCloud extractor for ${serverName}`);
+        return await extractMegaCloud(embedUrl, this.baseUrl);
       }
-    }
 
-    // All retries failed
-    console.error('Failed to decrypt embed after', maxRetries, 'attempts:', lastError || 'empty response');
-    throw new DecryptionError(`Failed to extract video from embed: ${embedUrl}`);
+      // Try VidCloud extractor for VidCloud and UpCloud servers
+      if (serverLower.includes('vidcloud') || serverLower.includes('upcloud')) {
+        console.log(`Using VidCloud extractor for ${serverName}`);
+        return await extractVidCloud(embedUrl, this.baseUrl);
+      }
+
+      // Fall back to VidCloud extractor (uses dec.eatmynerds.live API)
+      console.log(`Using fallback VidCloud extractor for ${serverName}`);
+      return await extractVidCloud(embedUrl, this.baseUrl);
+    } catch (error) {
+      console.error(`Extraction failed for ${serverName}:`, error);
+      throw new DecryptionError(`Failed to extract video from ${serverName}: ${embedUrl}`);
+    }
   }
 
   private parseMediaItem($: cheerio.CheerioAPI, element: Parameters<typeof $>[0]): MediaItem | null {

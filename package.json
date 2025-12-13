@@ -17,7 +17,9 @@
   "private": true,
   "devDependencies": {
     "@types/bun": "latest",
+    "@types/crypto-js": "^4.2.2",
     "@types/node": "^24.10.1",
+    "drizzle-kit": "^0.31.8",
     "react-devtools-core": "^7.0.1"
   },
   "peerDependencies": {
@@ -31,6 +33,8 @@
     "chalk": "4",
     "cheerio": "^1.1.2",
     "commander": "^14.0.2",
+    "crypto-js": "^4.2.0",
+    "drizzle-orm": "^0.45.0",
     "elysia": "^1.4.18",
     "ink": "^6.5.1",
     "ink-big-text": "^2.0.0",
