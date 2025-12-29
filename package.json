@@ -5,13 +5,14 @@
   "module": "index.ts",
   "type": "module",
   "bin": {
-    "topster": "./index.ts"
+    "topster": "./dist/index.js"
   },
   "scripts": {
     "start": "bun run index.ts",
     "dev": "bun --watch run index.ts",
     "mcp": "bun run index.ts --mcp",
     "build": "bun build ./index.ts --outdir ./dist --target bun",
+    "install:global": "bun run build && bun install --global",
     "typecheck": "tsc --noEmit",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate"

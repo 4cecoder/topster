@@ -1,6 +1,7 @@
 package com.topster.tv.ui.screens
 
 import android.app.Activity
+import android.app.Application
 import android.content.pm.ActivityInfo
 import android.util.Log
 import androidx.annotation.OptIn
@@ -22,18 +23,17 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
-import androidx.lifecycle.AndroidViewModel
-import androidx.lifecycle.viewModelScope
-import androidx.media3.common.MediaItem
 import androidx.media3.common.MimeTypes
-import androidx.media3.common.Player
-import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.hls.HlsMediaSource
 import androidx.media3.ui.PlayerView
+import androidx.media3.UnstableApi
+import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.viewModelScope
 import com.topster.tv.TopsterApplication
 import com.topster.tv.api.models.Episode
+import com.topster.tv.api.models.MediaItem
 import com.topster.tv.api.models.Season
 import com.topster.tv.api.models.VideoInfo
 import com.topster.tv.prefs.PlayerTweaksData
@@ -108,19 +108,7 @@ class ComposePlayerViewModel(application: Application) : AndroidViewModel(applic
     @OptIn(UnstableApi::class)
     fun initializePlayer(context: android.content.Context): ExoPlayer {
         if (player == null) {
-            player = ExoPlayer.Builder(context).build().apply {
-                addListener(object : Player.Listener {
-                    override fun onPlaybackStateChanged(state: Int) {
-                        if (state == Player.STATE_ENDED) {
-                            if (queue.isNotEmpty() && currentQueueIndex < queue.size - 1) {
-                                playNext()
-                            }
-                        }
-                    override fun onIsPlayingChanged(playing: Boolean) {
-                        isPlaying = playing
-                    }
-                })
-            }
+            player = ExoPlayer.Builder(context).build()
         }
         return player!!
     }
@@ -193,7 +181,7 @@ class ComposePlayerViewModel(application: Application) : AndroidViewModel(applic
 
     fun cyclePlaybackSpeed() {
         val speeds = floatArrayOf(0.75f, 1.0f, 1.25f, 1.5f, 2.0f)
-        val currentIndex = speeds.indexOf(playbackSpeed)
+        val currentIndex = speeds.indexOfFirst { it == playbackSpeed }
         val nextIndex = if (currentIndex == -1) 1 else (currentIndex + 1) % speeds.size
         playbackSpeed = speeds[nextIndex]
         player?.setPlaybackSpeed(speeds[nextIndex])
@@ -262,8 +250,8 @@ class ComposePlayerViewModel(application: Application) : AndroidViewModel(applic
 @Composable
 fun ComposePlayerScreen(
     playbackItem: PlaybackItem,
-    viewModel: ComposePlayerViewModel = viewModel(),
-    onBack: () -> Unit = {}
+    viewModel: ComposePlayerViewModel = androidx.lifecycle.viewmodel.compose.viewModel(),
+    onBack: () -> Unit = {},
     onSettings: () -> Unit = {}
 ) {
     val context = LocalContext.current
@@ -362,9 +350,6 @@ fun ComposePlayerScreen(
 
                 // Minimalist controls overlay - SmartTube inspired
                 if (viewModel.isControlsVisible) {
-                    val interactionSource = remember { MutableInteractionSource() }
-                    val isFocused by interactionSource.collectIsFocusedAsState()
-
                     Box(
                         modifier = Modifier
                             .fillMaxSize()

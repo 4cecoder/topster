@@ -3,7 +3,10 @@ package com.topster.tv.database
 import android.content.Context
 import android.util.Log
 import com.topster.tv.api.models.MediaItem
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.withContext
 
 class HistoryManager(context: Context) {
     private val database = TopsterDatabase.getDatabase(context)
@@ -32,24 +35,33 @@ class HistoryManager(context: Context) {
     }
 
     /**
-     * Get all watch history for grouped display
+     * Get all watch history for grouped display (reactive)
      */
-    fun getAllWatchHistory(): List<HistoryEntity> {
-        return historyDao.getAllHistory().blockingFirst() ?: emptyList()
+    fun getAllWatchHistory(): Flow<List<HistoryEntity>> {
+        return historyDao.getAllHistory()
+    }
+
+    /**
+     * Get all watch history for grouped display (blocking/suspend)
+     */
+    suspend fun getAllWatchHistoryList(): List<HistoryEntity> {
+        return withContext(Dispatchers.IO) {
+            historyDao.getAllHistory().first() ?: emptyList()
+        }
     }
 
     /**
      * Get all history for a specific TV show
      */
-    fun getHistoryByShow(showTitle: String): List<HistoryEntity> {
-        return historyDao.getHistoryByShow(showTitle).blockingFirst() ?: emptyList()
+    fun getHistoryByShow(showTitle: String): Flow<List<HistoryEntity>> {
+        return historyDao.getHistoryByShow(showTitle)
     }
 
     /**
      * Clear all watch history
      */
     suspend fun clearHistory() {
-        historyDao.clearHistory()
+        historyDao.clearAllHistory()
         Log.d(tag, "All watch history cleared")
     }
 

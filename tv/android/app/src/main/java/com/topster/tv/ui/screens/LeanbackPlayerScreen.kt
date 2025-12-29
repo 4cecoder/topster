@@ -1,6 +1,7 @@
 package com.topster.tv.ui.screens
 
 import android.app.Activity
+import android.app.Application
 import android.content.pm.ActivityInfo
 import android.util.Log
 import android.util.Rational
@@ -12,6 +13,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -77,13 +79,13 @@ class LeanbackPlayerViewModel(application: Application) : AndroidViewModel(appli
     var currentQueueIndex by mutableStateOf(0)
 
     fun initActions(context: android.content.Context) {
-        playPauseAction.value = PlayPauseAction(context, false)
-        skipNextAction.value = SkipNextAction(context)
-        skipPreviousAction.value = SkipPreviousAction(context)
-        fastForwardAction.value = FastForwardAction(context)
-        rewindAction.value = RewindAction(context)
-        videoSpeedAction.value = VideoSpeedAction(context)
-        backAction.value = BackAction(context)
+        playPauseAction.value = PlayPauseAction(false)
+        skipNextAction.value = SkipNextAction()
+        skipPreviousAction.value = SkipPreviousAction()
+        fastForwardAction.value = FastForwardAction()
+        rewindAction.value = RewindAction()
+        videoSpeedAction.value = VideoSpeedAction()
+        backAction.value = BackAction()
     }
 
     fun loadVideo(item: PlaybackItem) {
@@ -135,7 +137,6 @@ class LeanbackPlayerViewModel(application: Application) : AndroidViewModel(appli
                     }
                     override fun onIsPlayingChanged(playing: Boolean) {
                         isPlaying = playing
-                        playPauseAction.value?.setPlayingState(playing)
                     }
                 })
             }
@@ -320,7 +321,7 @@ class LeanbackPlayerViewModel(application: Application) : AndroidViewModel(appli
 @Composable
 fun LeanbackPlayerScreen(
     playbackItem: PlaybackItem,
-    viewModel: LeanbackPlayerViewModel = viewModel()
+    viewModel: LeanbackPlayerViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
 ) {
     val context = LocalContext.current
     val activity = context as? Activity
@@ -439,82 +440,56 @@ fun LeanbackPlayerScreen(
                         ) {
                             // Rewind
                             if (viewModel.rewindAction.value != null) {
-                                val interactionSource = remember { MutableInteractionSource() }
-                                val isFocused by interactionSource.collectIsFocusedAsState()
-
-                                Box(
-                                    modifier = Modifier
-                                        .scale(if (isFocused) 1.1f else 1f)
+                                Surface(
+                                    onClick = { viewModel.seekBackward() },
+                                    shape = RoundedCornerShape(8.dp),
+                                    color = Color.White.copy(alpha = 0.2f)
                                 ) {
-                                    Surface(
-                                        onClick = { viewModel.seekBackward() },
-                                        shape = RoundedCornerShape(8.dp),
-                                        color = if (isFocused) Color(0xFF00F5FF) else Color.White.copy(alpha = 0.2f),
-                                        interactionSource = interactionSource
+                                    Box(
+                                        modifier = Modifier
+                                            .size(56.dp)
+                                            .padding(12.dp),
+                                        contentAlignment = Alignment.Center
                                     ) {
-                                        Box(
-                                            modifier = Modifier
-                                                .size(56.dp)
-                                                .padding(12.dp),
-                                            contentAlignment = Alignment.Center
-                                        ) {
-                                            Text("⏪", fontSize = 28.sp, color = Color.White)
-                                        }
+                                        Text("⏪", fontSize = 28.sp, color = Color.White)
                                     }
                                 }
                             }
 
                             // Play/Pause (main action)
-                            val interactionSource = remember { MutableInteractionSource() }
-                            val isFocused by interactionSource.collectIsFocusedAsState()
-
-                            Box(
-                                modifier = Modifier.scale(if (isFocused) 1.15f else 1f)
+                            Surface(
+                                onClick = { viewModel.togglePlayPause() },
+                                shape = RoundedCornerShape(12.dp),
+                                color = Color.White.copy(alpha = 0.2f)
                             ) {
-                                Surface(
-                                    onClick = { viewModel.togglePlayPause() },
-                                    shape = RoundedCornerShape(12.dp),
-                                    color = if (isFocused) Color(0xFF00F5FF) else Color.White.copy(alpha = 0.2f),
-                                    interactionSource = interactionSource
+                                Box(
+                                    modifier = Modifier
+                                        .size(80.dp)
+                                        .padding(16.dp),
+                                    contentAlignment = Alignment.Center
                                 ) {
-                                    Box(
-                                        modifier = Modifier
-                                                .size(80.dp)
-                                                .padding(16.dp),
-                                            contentAlignment = Alignment.Center
-                                    ) {
-                                        Text(
-                                            if (viewModel.isPlaying) "⏸️" else "▶️",
-                                            fontSize = 40.sp,
-                                            color = Color.White
-                                        )
-                                    }
+                                    Text(
+                                        if (viewModel.isPlaying) "⏸️" else "▶️",
+                                        fontSize = 40.sp,
+                                        color = Color.White
+                                    )
                                 }
                             }
 
                             // Fast forward
                             if (viewModel.fastForwardAction.value != null) {
-                                val interactionSource = remember { MutableInteractionSource() }
-                                val isFocused by interactionSource.collectIsFocusedAsState()
-
-                                Box(
-                                    modifier = Modifier
-                                        .scale(if (isFocused) 1.1f else 1f)
+                                Surface(
+                                    onClick = { viewModel.seekForward() },
+                                    shape = RoundedCornerShape(8.dp),
+                                    color = Color.White.copy(alpha = 0.2f)
                                 ) {
-                                    Surface(
-                                        onClick = { viewModel.seekForward() },
-                                        shape = RoundedCornerShape(8.dp),
-                                        color = if (isFocused) Color(0xFF00F5FF) else Color.White.copy(alpha = 0.2f),
-                                        interactionSource = interactionSource
+                                    Box(
+                                        modifier = Modifier
+                                            .size(56.dp)
+                                            .padding(12.dp),
+                                        contentAlignment = Alignment.Center
                                     ) {
-                                        Box(
-                                            modifier = Modifier
-                                                .size(56.dp)
-                                                .padding(12.dp),
-                                            contentAlignment = Alignment.Center
-                                        ) {
-                                            Text("⏩", fontSize = 28.sp, color = Color.White)
-                                        }
+                                        Text("⏩", fontSize = 28.sp, color = Color.White)
                                     }
                                 }
                             }
@@ -531,53 +506,35 @@ fun LeanbackPlayerScreen(
                                 horizontalArrangement = Arrangement.spacedBy(12.dp)
                             ) {
                                 if (viewModel.currentQueueIndex > 0) {
-                                    val interactionSource = remember { MutableInteractionSource() }
-                                    val isFocused by interactionSource.collectIsFocusedAsState()
-
-                                    Box(
-                                        modifier = Modifier
-                                            .scale(if (isFocused) 1.1f else 1f)
+                                    Surface(
+                                        onClick = { viewModel.playPrevious() },
+                                        shape = RoundedCornerShape(8.dp),
+                                        color = Color.White.copy(alpha = 0.2f)
                                     ) {
-                                        Surface(
-                                            onClick = { viewModel.playPrevious() },
-                                            shape = RoundedCornerShape(8.dp),
-                                            color = if (isFocused) Color(0xFF00F5FF) else Color.White.copy(alpha = 0.2f),
-                                            interactionSource = interactionSource
+                                        Box(
+                                            modifier = Modifier
+                                                    .size(44.dp)
+                                                    .padding(8.dp),
+                                                contentAlignment = Alignment.Center
                                         ) {
-                                            Box(
-                                                modifier = Modifier
-                                                        .size(44.dp)
-                                                        .padding(8.dp),
-                                                    contentAlignment = Alignment.Center
-                                            ) {
-                                                Text("⏮", fontSize = 20.sp, color = Color.White)
-                                            }
+                                            Text("⏮", fontSize = 20.sp, color = Color.White)
                                         }
                                     }
                                 }
 
                                 if (viewModel.queue.isNotEmpty() && viewModel.currentQueueIndex < viewModel.queue.size - 1) {
-                                    val interactionSource = remember { MutableInteractionSource() }
-                                    val isFocused by interactionSource.collectIsFocusedAsState()
-
-                                    Box(
-                                        modifier = Modifier
-                                            .scale(if (isFocused) 1.1f else 1f)
+                                    Surface(
+                                        onClick = { viewModel.playNext() },
+                                        shape = RoundedCornerShape(8.dp),
+                                        color = Color.White.copy(alpha = 0.2f)
                                     ) {
-                                        Surface(
-                                            onClick = { viewModel.playNext() },
-                                            shape = RoundedCornerShape(8.dp),
-                                            color = if (isFocused) Color(0xFF00F5FF) else Color.White.copy(alpha = 0.2f),
-                                            interactionSource = interactionSource
+                                        Box(
+                                            modifier = Modifier
+                                                .size(44.dp)
+                                                .padding(8.dp),
+                                            contentAlignment = Alignment.Center
                                         ) {
-                                            Box(
-                                                modifier = Modifier
-                                                        .size(44.dp)
-                                                        .padding(8.dp),
-                                                    contentAlignment = Alignment.Center
-                                            ) {
-                                                Text("⏭", fontSize = 20.sp, color = Color.White)
-                                            }
+                                            Text("⏭", fontSize = 20.sp, color = Color.White)
                                         }
                                     }
                                 }
@@ -628,9 +585,6 @@ fun LeanbackPlayerScreen(
                         }
 
                         // Back button (top-left)
-                        val interactionSource = remember { MutableInteractionSource() }
-                        val isFocused by interactionSource.collectIsFocusedAsState()
-
                         Box(
                             modifier = Modifier
                                 .align(Alignment.TopStart)
@@ -639,8 +593,7 @@ fun LeanbackPlayerScreen(
                             Surface(
                                 onClick = { activity?.finish() },
                                 shape = RoundedCornerShape(8.dp),
-                                color = if (isFocused) Color(0xFF00F5FF) else Color.White.copy(alpha = 0.2f),
-                                interactionSource = interactionSource
+                                color = Color.White.copy(alpha = 0.2f)
                             ) {
                                 Box(
                                     modifier = Modifier

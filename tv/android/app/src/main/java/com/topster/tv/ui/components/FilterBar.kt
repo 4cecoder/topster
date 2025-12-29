@@ -1,9 +1,11 @@
 package com.topster.tv.ui.components
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -20,7 +22,7 @@ import com.topster.tv.api.models.MediaItem
 data class FilterOptions(
     val type: MediaType? = null,
     val yearRange: YearRange? = null,
-    val quality: List<String>? = null
+    val quality: List<String>? = null,
     val hasYearOnly: Boolean? = null
 )
 
@@ -249,7 +251,7 @@ fun FilterBar(
                         items(listOf(null) + MediaQuality.all) { quality ->
                             FilterChip(
                                 label = quality?.displayName ?: "All Qualities",
-                                selected = quality == null || filters.quality?.contains(quality?.value ?: ""),
+                                selected = quality == null || (filters.quality?.contains(quality?.value ?: "") == true),
                                 onClick = {
                                     if (quality == null) {
                                         onFilterChange(filters.copy(quality = null))

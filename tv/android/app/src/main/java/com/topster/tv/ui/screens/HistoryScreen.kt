@@ -355,7 +355,6 @@ private fun HistoryEntryCard(entry: GroupedHistoryEntry, onClick: () -> Unit) {
         onClick = onClick,
         modifier = Modifier
             .fillMaxWidth()
-            .scale(if (isFocused) 1.05f else 1f)
             .then(animateContentSize(label = "history_card_${entry.id}")),
         shape = RoundedCornerShape(12.dp),
         tonalElevation = if (isFocused) 8.dp else 4.dp,
@@ -554,7 +553,6 @@ private fun SeasonCard(season: Season, onClick: () -> Unit) {
         onClick = onClick,
         modifier = Modifier
             .fillMaxWidth()
-            .scale(if (isFocused) 1.05f else 1f)
             .then(animateContentSize(label = "season_${season.number}")),
         shape = RoundedCornerShape(12.dp),
         tonalElevation = if (isFocused) 8.dp else 4.dp,
@@ -573,19 +571,12 @@ private fun SeasonCard(season: Season, onClick: () -> Unit) {
 
 @Composable
 private fun EpisodeCard(episode: Episode, onClick: () -> Unit) {
-    var isFocused by remember { mutableStateOf(false) }
-    val interactionSource = remember { MutableInteractionSource() }
-    isFocused = interactionSource.collectIsFocusedAsState().value
-
     Surface(
         onClick = onClick,
-        modifier = Modifier
-            .fillMaxWidth()
-            .scale(if (isFocused) 1.05f else 1f),
+        modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
-        tonalElevation = if (isFocused) 4.dp else 2.dp,
-        color = if (isFocused) Color(0xFF1E3A5F) else Color(0xFF16213E),
-        interactionSource = interactionSource
+        tonalElevation = 2.dp,
+        color = Color(0xFF16213E)
     ) {
         Column(modifier = Modifier.padding(12.dp)) {
             Text(

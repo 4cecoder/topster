@@ -192,38 +192,27 @@ dependencies {
             checkAllWarnings = true
 
         // Disable issues we intentionally ignore
-        disable += [
+        disable.addAll(listOf(
             "TypographyEllipsis",
             "OldTargetApi",
             "ExpiredTargetSdkVersion",
-            "ContentDescription",
-        ]
+            "ContentDescription"
+        ))
 
         // Enable additional checks
-        enable += [
+        enable.addAll(listOf(
             "UnusedResources",
             "Overdraw",
             "VectorPath",
             "RLog",
             "RestrictedApi",
-            "KotlinConstantConditions",
-        ]
+            "KotlinConstantConditions"
+        ))
 
             // Configure output
             htmlReport = true
             xmlReport = true
             htmlOutput = file("${project.buildDir}/reports/lint-results.html")
             xmlOutput = file("${project.buildDir}/reports/lint-results.xml")
-        }
-
-        // Kotlin code quality with Detekt
-        detekt {
-            buildUponDefaultConfig = true
-            allRules = false
-
-            config.setFrom("$projectDir/config/detekt/detekt.yml")
-
-            reportsDir = file("$buildDir/reports/detekt")
-            outputToSout = true
         }
     }
