@@ -191,23 +191,23 @@ dependencies {
             absolutePaths = false
             checkAllWarnings = true
 
-            // Disable issues we intentionally ignore
-            disable += [
-                "TypographyEllipsis",
-                "OldTargetApi",
-                "ExpiredTargetSdkVersion",
-                "ContentDescription",
-            ]
+        // Disable issues we intentionally ignore
+        disable += [
+            "TypographyEllipsis",
+            "OldTargetApi",
+            "ExpiredTargetSdkVersion",
+            "ContentDescription",
+        ]
 
-            // Enable additional checks
-            enable += [
-                "UnusedResources",
-                "Overdraw",
-                "VectorPath",
-                "RLog",
-                "RestrictedApi",
-                "KotlinConstantConditions",
-            ]
+        // Enable additional checks
+        enable += [
+            "UnusedResources",
+            "Overdraw",
+            "VectorPath",
+            "RLog",
+            "RestrictedApi",
+            "KotlinConstantConditions",
+        ]
 
             // Configure output
             htmlReport = true
@@ -227,4 +227,3 @@ dependencies {
             outputToSout = true
         }
     }
-}
