@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Player Actions -->
+    <string name="action_play">Play</string>
+    <string name="action_pause">Pause</string>
+    <string name="action_next">Next</string>
+    <string name="action_previous">Previous</string>
+    <string name="action_fast_forward">Fast Forward</string>
+    <string name="action_rewind">Rewind</string>
+    <string name="action_speed">Speed</string>
+    <string name="action_seek_interval">Seek Interval</string>
+    <string name="action_back">Back</string>
+    <string name="action_pip">PiP</string>
+    <string name="action_repeat_mode">Repeat</string>
+
+    <!-- Settings -->
+    <string name="player_settings">Player Settings</string>
+    <string name="playback_controls">Playback Controls</string>
+    <string name="reset_defaults">Reset to Defaults</string>
+</resources>
