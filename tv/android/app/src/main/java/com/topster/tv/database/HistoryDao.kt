@@ -23,6 +23,15 @@ interface HistoryDao {
     @Query("DELETE FROM watch_history WHERE mediaId = :mediaId AND episodeId = :episodeId")
     suspend fun deleteHistoryEntry(mediaId: String, episodeId: String?)
 
+@Query("SELECT COUNT(*) FROM watch_history")
+    suspend fun getHistoryCount(): Int
+
+    @Query("SELECT * FROM watch_history ORDER BY lastWatched DESC")
+    fun getAllHistory(): Flow<List<HistoryEntity>>
+
+    @Query("SELECT * FROM watch_history WHERE title = :showTitle ORDER BY lastWatched DESC")
+    fun getHistoryByShow(showTitle: String): Flow<List<HistoryEntity>>
+
     @Query("DELETE FROM watch_history")
     suspend fun clearAllHistory()
 

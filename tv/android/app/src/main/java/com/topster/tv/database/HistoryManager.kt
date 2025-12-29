@@ -32,6 +32,28 @@ class HistoryManager(context: Context) {
     }
 
     /**
+     * Get all watch history for grouped display
+     */
+    fun getAllWatchHistory(): List<HistoryEntity> {
+        return historyDao.getAllHistory().blockingFirst() ?: emptyList()
+    }
+
+    /**
+     * Get all history for a specific TV show
+     */
+    fun getHistoryByShow(showTitle: String): List<HistoryEntity> {
+        return historyDao.getHistoryByShow(showTitle).blockingFirst() ?: emptyList()
+    }
+
+    /**
+     * Clear all watch history
+     */
+    suspend fun clearHistory() {
+        historyDao.clearHistory()
+        Log.d(tag, "All watch history cleared")
+    }
+
+    /**
      * Add or update watch history
      */
     suspend fun updateWatchHistory(

@@ -50,7 +50,7 @@ config:
       - unsafe-call
 
   # Exclusions for generated files or Android-specific patterns
-  excludes:
+  exclude:
     - '**/build/**'
     - '**/generated/**'
     - '**/test/**'
