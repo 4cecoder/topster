@@ -2,11 +2,8 @@ package com.topster.tv.ui.screens
 
 import android.app.Activity
 import android.app.Application
-import android.app.PictureInPictureParams
 import android.content.pm.ActivityInfo
-import android.os.Build
 import android.util.Log
-import android.util.Rational
 import android.view.ViewGroup
 import android.widget.FrameLayout
 import androidx.annotation.OptIn
@@ -17,6 +14,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
+import androidx.compose.material3.IconButton
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -24,6 +22,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -42,8 +41,7 @@ import com.topster.tv.TopsterApplication
 import com.topster.tv.api.models.Episode
 import com.topster.tv.api.models.Season
 import com.topster.tv.api.models.VideoInfo
-import com.topster.tv.ui.components.FuturisticButton
-import com.topster.tv.ui.components.CyberLoadingIndicator
+
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -404,55 +402,46 @@ fun PlayerScreen(
     ) {
         when {
             viewModel.isLoading -> {
-                Column(
+                Box(
                     modifier = Modifier.align(Alignment.Center),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                    contentAlignment = Alignment.Center
                 ) {
-                    CyberLoadingIndicator()
-                    Text(
-                        text = "Loading video...",
-                        color = Color.White.copy(alpha = 0.9f),
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Medium
+                    CircularProgressIndicator(
+                        color = Color.White,
+                        strokeWidth = 3.dp,
+                        modifier = Modifier.size(32.dp)
                     )
-                    viewModel.currentItem?.let { item ->
-                        Text(
-                            text = if (item.type == "tv")
-                                "S${item.seasonNumber} E${item.episodeNumber} - ${item.episodeTitle}"
-                            else
-                                item.title,
-                            color = Color.White.copy(alpha = 0.7f),
-                            fontSize = 14.sp
-                        )
-                    }
                 }
             }
             viewModel.error != null -> {
                 Column(
                     modifier = Modifier
                         .align(Alignment.Center)
-                        .padding(48.dp),
+                        .padding(32.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     Text(
-                        text = "⚠️",
-                        fontSize = 64.sp,
-                        color = Color(0xFFFF006E)
+                        text = "❌",
+                        fontSize = 48.sp,
+                        color = Color(0xFFFF4444)
                     )
                     Text(
                         text = viewModel.error ?: "Unknown error",
-                        color = Color.White.copy(alpha = 0.9f),
-                        style = MaterialTheme.typography.bodyLarge,
-                        fontSize = 16.sp
+                        color = Color.White,
+                        fontSize = 14.sp,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(horizontal = 16.dp)
                     )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    FuturisticButton(
-                        text = "Go Back",
+                    Spacer(modifier = Modifier.height(16.dp))
+                    TextButton(
                         onClick = onBack,
-                        icon = "←"
-                    )
+                        colors = ButtonDefaults.textButtonColors(
+                            contentColor = Color.White
+                        )
+                    ) {
+                        Text("Go Back", fontSize = 16.sp)
+                    }
                 }
             }
             else -> {
@@ -495,26 +484,26 @@ fun PlayerScreen(
                                 )
                             )
                     ) {
-                        // Main playback controls - center
+                        // Streamlined playback controls - center
                         Row(
                             modifier = Modifier
                                 .align(Alignment.Center),
-                            horizontalArrangement = Arrangement.spacedBy(24.dp),
+                            horizontalArrangement = Arrangement.spacedBy(32.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             // Rewind 10 seconds
-                            FuturisticButton(
-                                text = "10s",
+                            IconButton(
                                 onClick = {
                                     player.seekTo((player.currentPosition - 10000).coerceAtLeast(0))
                                     showControlsTemporarily()
                                 },
-                                compact = false
-                            )
+                                modifier = Modifier.size(60.dp)
+                            ) {
+                                Text("⏪", fontSize = 32.sp, color = Color.White)
+                            }
 
-                            // Play/Pause button
-                            FuturisticButton(
-                                text = if (isPlaying) "Pause" else "Play",
+                            // Play/Pause button (larger for main action)
+                            IconButton(
                                 onClick = {
                                     if (isPlaying) {
                                         player.pause()
@@ -523,94 +512,68 @@ fun PlayerScreen(
                                     }
                                     showControlsTemporarily()
                                 },
-                                compact = false
-                            )
+                                modifier = Modifier.size(80.dp)
+                            ) {
+                                Text(
+                                    if (isPlaying) "⏸️" else "▶️",
+                                    fontSize = 40.sp,
+                                    color = Color.White
+                                )
+                            }
 
                             // Fast forward 10 seconds
-                            FuturisticButton(
-                                text = "+10s",
+                            IconButton(
                                 onClick = {
                                     player.seekTo((player.currentPosition + 10000).coerceAtMost(player.duration))
                                     showControlsTemporarily()
                                 },
-                                compact = false
-                            )
+                                modifier = Modifier.size(60.dp)
+                            ) {
+                                Text("⏩", fontSize = 32.sp, color = Color.White)
+                            }
                         }
 
-                        // Episode navigation - top right
+                        // Minimal episode navigation - top right
                         Row(
                             modifier = Modifier
                                 .align(Alignment.TopEnd)
                                 .padding(16.dp),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
                             // Previous episode button
                             if (viewModel.hasPrevious()) {
-                                FuturisticButton(
-                                    text = "Prev Ep",
+                                IconButton(
                                     onClick = {
                                         viewModel.playPrevious()
                                         showControlsTemporarily()
                                     },
-                                    compact = true
-                                )
+                                    modifier = Modifier.size(40.dp)
+                                ) {
+                                    Text("⏮", fontSize = 20.sp, color = Color.White)
+                                }
                             }
 
                             // Next episode button
                             if (viewModel.hasNext()) {
-                                FuturisticButton(
-                                    text = "Next Ep",
+                                IconButton(
                                     onClick = {
                                         viewModel.playNext()
                                         showControlsTemporarily()
                                     },
-                                    compact = true
-                                )
-                            }
-
-                            // Picture-in-Picture button
-                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                                FuturisticButton(
-                                    text = "PIP",
-                                    onClick = {
-                                        activity?.enterPictureInPictureMode(
-                                            PictureInPictureParams.Builder()
-                                                .setAspectRatio(Rational(16, 9))
-                                                .build()
-                                        )
-                                    },
-                                    compact = true
-                                )
+                                    modifier = Modifier.size(40.dp)
+                                ) {
+                                    Text("⏭", fontSize = 20.sp, color = Color.White)
+                                }
                             }
                         }
 
-                        // Progress bar and time - bottom
+                        // Progress bar and time - bottom (streamlined)
                         Column(
                             modifier = Modifier
                                 .align(Alignment.BottomCenter)
                                 .fillMaxWidth()
-                                .padding(horizontal = 48.dp, vertical = 24.dp)
+                                .padding(horizontal = 24.dp, vertical = 16.dp)
                         ) {
-                            // Time display
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween
-                            ) {
-                                Text(
-                                    text = formatTime(currentPosition),
-                                    color = Color.White,
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.Medium
-                                )
-                                Text(
-                                    text = formatTime(duration),
-                                    color = Color.White.copy(alpha = 0.7f),
-                                    fontSize = 14.sp
-                                )
-                            }
-
-                            Spacer(modifier = Modifier.height(8.dp))
-
                             // Progress bar
                             Slider(
                                 value = if (duration > 0) {
@@ -622,31 +585,51 @@ fun PlayerScreen(
                                 },
                                 modifier = Modifier.fillMaxWidth(),
                                 colors = SliderDefaults.colors(
-                                    thumbColor = Color(0xFF00F5FF),
-                                    activeTrackColor = Color(0xFF00F5FF),
-                                    inactiveTrackColor = Color.White.copy(alpha = 0.3f)
+                                    thumbColor = Color.White,
+                                    activeTrackColor = Color.White,
+                                    inactiveTrackColor = Color.White.copy(alpha = 0.4f)
                                 )
                             )
+
+                            // Time display
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(top = 4.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text(
+                                    text = formatTime(currentPosition),
+                                    color = Color.White.copy(alpha = 0.9f),
+                                    fontSize = 12.sp
+                                )
+                                Text(
+                                    text = formatTime(duration),
+                                    color = Color.White.copy(alpha = 0.7f),
+                                    fontSize = 12.sp
+                                )
+                            }
                         }
 
-                        // Back button - top left
-                        FuturisticButton(
-                            text = "Back",
+                        // Back button - top left (minimal)
+                        IconButton(
                             onClick = onBack,
-                            compact = true,
                             modifier = Modifier
                                 .align(Alignment.TopStart)
                                 .padding(16.dp)
-                        )
+                                .size(40.dp)
+                        ) {
+                            Text("←", fontSize = 24.sp, color = Color.White)
+                        }
                     }
                 }
 
-                // Queue info
+                // Minimal queue info
                 if (viewModel.queue.isNotEmpty()) {
                     Text(
-                        text = "Playing ${viewModel.currentQueueIndex + 1}/${viewModel.queue.size}",
-                        color = Color.White,
-                        style = MaterialTheme.typography.bodySmall,
+                        text = "${viewModel.currentQueueIndex + 1}/${viewModel.queue.size}",
+                        color = Color.White.copy(alpha = 0.7f),
+                        fontSize = 12.sp,
                         modifier = Modifier
                             .align(Alignment.BottomStart)
                             .padding(16.dp)

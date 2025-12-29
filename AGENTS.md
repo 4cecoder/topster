@@ -1,157 +1,95 @@
 # AGENTS.md - Coding Guidelines for Topster
 
-This document provides coding guidelines, build commands, and conventions for the Topster codebase. Follow these guidelines when making changes to maintain code quality and consistency.
+This document provides coding guidelines, build commands, and conventions for the Topster codebase.
 
 ## Build, Lint, and Test Commands
 
 ### Core Application (CLI)
+**LSP & Linting**: TypeScript LSP (VS Code built-in), Bun type checker
 ```bash
-# Development server with hot reload
-bun run dev
-
-# Production build
-bun run build
-
-# Type checking
-bun run typecheck
-
-# Run all tests
-bun test
-
-# Run specific test file
-bun test src/modules/scraper/http.test.ts
-
-# Run tests with coverage (if configured)
-bun test --coverage
-
-# Database operations
-bun run db:generate  # Generate migration files
-bun run db:migrate   # Run migrations
+bun run dev              # Development server with hot reload
+bun run build            # Production build
+bun run typecheck        # Type checking
+bun test                 # Run all tests
+bun test <path>          # Run specific test file (e.g., src/modules/scraper/http.test.ts)
+bun run db:generate      # Generate migration files
+bun run db:migrate       # Run migrations
 ```
 
 ### Web Application (Next.js)
+**LSP & Linting**: TypeScript LSP, ESLint (Next.js config)
 ```bash
 cd site
-
-# Development server
-bun run dev
-
-# Production build
-bun run build
-
-# Start production server
-bun run start
-
-# Lint code
-bun run lint
-
-# Preview production build
-bun run preview
+bun run dev              # Development server
+bun run build            # Production build
+bun run start            # Start production server
+bun run lint             # Lint code
+bun run preview          # Preview production build
 ```
 
-### General Commands
+### Android TV Application
+**LSP & Linting**: Kotlin Language Server, Android Lint, Detekt
 ```bash
-# Install dependencies
-bun install
+cd tv/android
+./gradlew testStableDebugUnitTest --stacktrace
+./gradlew lintStableDebug --stacktrace
+./gradlew assembleStableDebug
+```
 
-# Clean build artifacts
-rm -rf dist drizzle
-
-# Full test suite with type checking
-bun test && bun run typecheck
+### General
+```bash
+bun install              # Install dependencies
+rm -rf dist drizzle      # Clean build artifacts
+bun test && bun run typecheck  # Full test suite
 ```
 
 ## Code Style Guidelines
 
 ### TypeScript Configuration
-- **Strict mode enabled**: All TypeScript strict flags are active
+- **Strict mode**: All TypeScript strict flags active
 - **No `any` types**: Use proper types, `unknown`, or generics
-- **Explicit imports**: Import types explicitly with `import type`
-- **File extensions**: Use `.js` extensions in import statements for TypeScript files
+- **File extensions**: Use `.js` extensions in imports for TypeScript files
+- **Type imports**: Import types explicitly with `import type`
 
-### Runtime Environment
-- **Bun runtime**: Use Bun APIs instead of Node.js equivalents:
-  - `Bun.serve()` instead of Express
-  - `bun:sqlite` instead of `better-sqlite3`
-  - `Bun.redis` instead of `ioredis`
-  - `Bun.sql` instead of `pg` or `postgres.js`
-  - `WebSocket` (built-in) instead of `ws`
-  - `Bun.file` instead of `node:fs`
+### Runtime Environment (Bun)
+Use Bun APIs instead of Node.js:
+- `Bun.serve()` instead of Express
+- `bun:sqlite` instead of `better-sqlite3`
+- `WebSocket` (built-in) instead of `ws`
+- `Bun.file()` instead of `node:fs`
 
 ### Error Handling
-- **Custom error classes**: Extend `TopsterError` from `src/core/errors.ts`
-- **Specific error types**: Use appropriate error classes (NetworkError, ScrapingError, etc.)
-- **Error propagation**: Let errors bubble up, catch and handle at appropriate levels
-- **Error formatting**: Use `formatError()` helper for consistent error messages
+Extend `TopsterError` from `src/core/errors.ts`:
+- `NetworkError` - Network-related failures
+- `ScrapingError` - Web scraping failures
+- `ConfigError` - Configuration issues
+- `PlayerError` - Media player errors
+- `NoResultsError` - Empty search results
+- `DecryptionError` - Decryption failures
+- `HLSError` - HLS streaming errors
+- `HistoryError` - History database errors
+- `DownloadError` - Download failures
+- `MCPError` - MCP integration errors
 
-```typescript
-import { NetworkError, formatError } from '../core/errors';
-
-try {
-  await fetchData();
-} catch (error) {
-  if (error instanceof NetworkError) {
-    console.error(formatError(error));
-    return;
-  }
-  throw error;
-}
-```
+Use `formatError()` helper for consistent error messages.
 
 ### Naming Conventions
-
-#### Variables and Functions
-- `camelCase` for variables, functions, and methods
-- Descriptive names that indicate purpose
-- Boolean variables prefixed with `is`, `has`, `can`, `should`
-
-```typescript
-const isValidUrl: boolean;
-const hasResults: boolean;
-function fetchHtml(url: string): Promise<string>
-```
-
-#### Types and Interfaces
-- `PascalCase` for interfaces, types, classes, and enums
-- Suffix interfaces with descriptive names when needed
-
-```typescript
-interface MediaItem {
-  id: string;
-  title: string;
-}
-
-type MediaType = 'movie' | 'tv';
-
-class NetworkError extends TopsterError {
-  // ...
-}
-```
-
-#### Files and Directories
-- `kebab-case` for file names (except components)
-- `PascalCase` for React component files
-- Group related files in directories
+- Variables/Functions: `camelCase` (prefix booleans with `is`, `has`, `can`, `should`)
+- Types/Interfaces/Classes/Enums: `PascalCase`
+- Files: `kebab-case` (except React components: `PascalCase`)
+- Directories: `kebab-case`
 
 ### Import Organization
-- **Relative imports**: Use relative paths with `./` or `../`
-- **Type imports**: Separate type-only imports
-- **Group imports**: Group by external libraries, then internal modules
-
+Use relative imports (`./` or `../`). Group imports:
 ```typescript
-import type { MediaItem, MediaType } from '../../core/types';
-import { NetworkError } from '../../core/errors';
+import type { MediaItem } from '../../core/types.js';
+import { NetworkError } from '../../core/errors.js';
 import React from 'react';
 import { Box, Text } from 'ink';
 ```
 
 ### React Components (CLI with Ink)
-- **Functional components**: Use function declarations
-- **Props interface**: Define props types explicitly
-- **Hooks**: Use React hooks for state management
-- **Memoization**: Use `React.useMemo` for expensive computations
-
-```tsx
+```typescript
 interface MediaListProps {
   items: MediaItem[];
   onSelect: (item: MediaItem) => void;
@@ -159,82 +97,72 @@ interface MediaListProps {
 
 export const MediaList: React.FC<MediaListProps> = ({ items, onSelect }) => {
   const [selectedIndex, setSelectedIndex] = React.useState(0);
-
-  const filteredItems = React.useMemo(() => {
-    return items.filter(item => item.type === 'movie');
-  }, [items]);
-
-  return (
-    <Box>
-      {/* Component JSX */}
-    </Box>
-  );
+  const filteredItems = React.useMemo(() => items.filter(item => item.type === 'movie'), [items]);
+  return <Box>{/* JSX */}</Box>;
 };
 ```
 
+### React Components (Web with Next.js)
+```typescript
+'use client';
+
+interface MediaCardProps {
+  media: MediaItem;
+}
+
+export function MediaCard({ media }: MediaCardProps) {
+  return <Link href={`/watch/${media.id}`} className="...">{/* JSX */}</Link>;
+}
+```
+
 ### Database (Drizzle ORM)
-- **Schema definitions**: Define in `src/modules/*/schema.ts`
-- **Migrations**: Generate and run migrations for schema changes
-- **Queries**: Use Drizzle's query builder for type-safe operations
+- Schema definitions in `src/modules/*/schema.ts`
+- Generate and run migrations for schema changes
+- Use Drizzle query builder for type-safe operations
 
 ### Security Practices
-- **Input validation**: Validate all user inputs and API responses
-- **Header sanitization**: Clean HTTP headers to prevent injection
-- **SSRF protection**: Block localhost and private IP ranges
-- **JSON safety**: Parse JSON securely with size limits and prototype pollution checks
+- Validate all user inputs and API responses
+- Sanitize HTTP headers (remove `\r\n` and `\0`)
+- Block localhost and private IP ranges for SSRF protection
+- Parse JSON with size limits and prototype pollution checks
 
-### Testing
-- **Bun test runner**: Use `bun test` with `describe` and `test` blocks
-- **Test file naming**: `*.test.ts` or `*.spec.ts`
-- **Test organization**: Group related tests in describe blocks
-- **Mocking**: Use Bun's built-in mocking capabilities
-
+### Testing (Bun)
+- Use `bun test` with `describe` and `test` blocks
+- Test files: `*.test.ts` or `*.spec.ts`
+- Mocking: Use Bun's built-in capabilities
 ```typescript
 import { describe, test, expect } from 'bun:test';
 
 describe('HTTP Client', () => {
   test('should validate HTTPS URLs', () => {
-    // Test implementation
+    expect(isValidUrl('https://example.com')).toBe(true);
   });
 });
 ```
 
-### Code Comments
-- **JSDoc**: Use for public APIs and complex functions
-- **Inline comments**: Explain complex logic, not obvious code
-- **TODO comments**: Mark areas needing improvement
-
-### Commit Messages
-- **Format**: `type(scope): description`
-- **Types**: `feat`, `fix`, `docs`, `style`, `refactor`, `test`, `chore`
-- **Description**: Start with lowercase, be descriptive
-
 ### File Structure
 ```
 src/
-├── cli/           # Command-line interface components
+├── cli/           # Command-line interface (Ink components)
 ├── core/          # Core types, errors, config
 ├── modules/       # Feature modules (scraper, player, etc.)
-├── mcp/           # Model Context Protocol integration
-└── tv/            # Android TV application
+└── mcp/           # Model Context Protocol integration
 
 site/              # Next.js web application
 drizzle/           # Database migrations
 ```
 
-### Performance Considerations
-- **Bundle optimization**: Use Bun's built-in bundling
-- **Lazy loading**: Load modules only when needed
-- **Caching**: Implement appropriate caching strategies
-- **Memory management**: Clean up resources and event listeners
+### Performance
+- Use Bun's built-in bundling
+- Lazy load modules when needed
+- Implement caching strategies
+- Clean up resources and event listeners
 
 ### Development Workflow
-1. **Branch**: Create feature branches from `main`
-2. **Test**: Write tests for new functionality
-3. **Lint**: Run linting before committing
-4. **Type check**: Ensure TypeScript compilation passes
-5. **Commit**: Use descriptive commit messages
-6. **PR**: Create pull requests for review
+1. Create feature branches from `main`
+2. Write tests for new functionality
+3. Run `bun run typecheck` and linting
+4. Commit with descriptive messages (`type(scope): description`)
+5. Create pull requests for review
 
-Remember to run `bun test && bun run typecheck` before pushing changes to ensure code quality.</content>
-<parameter name="filePath">AGENTS.md
+Always run `bun test && bun run typecheck` before pushing changes.
