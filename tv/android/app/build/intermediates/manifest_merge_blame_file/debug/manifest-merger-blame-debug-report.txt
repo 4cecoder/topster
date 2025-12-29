@@ -1,0 +1,226 @@
+1<?xml version="1.0" encoding="utf-8"?>
+2<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+3    package="com.topster.tv"
+4    android:versionCode="1"
+5    android:versionName="1.0.0" >
+6
+7    <uses-sdk
+8        android:minSdkVersion="21"
+9        android:targetSdkVersion="34" />
+10
+11    <!-- Permissions -->
+12    <uses-permission android:name="android.permission.INTERNET" />
+12-->/home/fource/gobster/lobster/topster/tv/android/app/src/main/AndroidManifest.xml:5:5-67
+12-->/home/fource/gobster/lobster/topster/tv/android/app/src/main/AndroidManifest.xml:5:22-64
+13    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+13-->/home/fource/gobster/lobster/topster/tv/android/app/src/main/AndroidManifest.xml:6:5-79
+13-->/home/fource/gobster/lobster/topster/tv/android/app/src/main/AndroidManifest.xml:6:22-76
+14    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+14-->/home/fource/gobster/lobster/topster/tv/android/app/src/main/AndroidManifest.xml:7:5-83
+14-->/home/fource/gobster/lobster/topster/tv/android/app/src/main/AndroidManifest.xml:7:22-80
+15    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+15-->/home/fource/gobster/lobster/topster/tv/android/app/src/main/AndroidManifest.xml:8:5-81
+15-->/home/fource/gobster/lobster/topster/tv/android/app/src/main/AndroidManifest.xml:8:22-78
+16    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+16-->/home/fource/gobster/lobster/topster/tv/android/app/src/main/AndroidManifest.xml:9:5-80
+16-->/home/fource/gobster/lobster/topster/tv/android/app/src/main/AndroidManifest.xml:9:22-77
+17
+18    <!-- Picture-in-Picture support -->
+19    <uses-feature
+19-->/home/fource/gobster/lobster/topster/tv/android/app/src/main/AndroidManifest.xml:12:5-14:36
+20        android:name="android.software.picture_in_picture"
+20-->/home/fource/gobster/lobster/topster/tv/android/app/src/main/AndroidManifest.xml:13:9-59
+21        android:required="false" />
+21-->/home/fource/gobster/lobster/topster/tv/android/app/src/main/AndroidManifest.xml:14:9-33
+22
+23    <!-- Declare this is a TV app -->
+24    <uses-feature
+24-->/home/fource/gobster/lobster/topster/tv/android/app/src/main/AndroidManifest.xml:17:5-19:35
+25        android:name="android.software.leanback"
+25-->/home/fource/gobster/lobster/topster/tv/android/app/src/main/AndroidManifest.xml:18:9-49
+26        android:required="true" />
+26-->/home/fource/gobster/lobster/topster/tv/android/app/src/main/AndroidManifest.xml:19:9-32
+27
+28    <!-- Touchscreen is not required for TV -->
+29    <uses-feature
+29-->/home/fource/gobster/lobster/topster/tv/android/app/src/main/AndroidManifest.xml:22:5-24:36
+30        android:name="android.hardware.touchscreen"
+30-->/home/fource/gobster/lobster/topster/tv/android/app/src/main/AndroidManifest.xml:23:9-52
+31        android:required="false" />
+31-->/home/fource/gobster/lobster/topster/tv/android/app/src/main/AndroidManifest.xml:24:9-33
+32
+33    <permission
+33-->[androidx.core:core:1.12.0] /home/fource/.gradle/caches/transforms-3/6997e79772870a03479846901546e16c/transformed/core-1.12.0/AndroidManifest.xml:22:5-24:47
+34        android:name="com.topster.tv.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"
+34-->[androidx.core:core:1.12.0] /home/fource/.gradle/caches/transforms-3/6997e79772870a03479846901546e16c/transformed/core-1.12.0/AndroidManifest.xml:23:9-81
+35        android:protectionLevel="signature" />
+35-->[androidx.core:core:1.12.0] /home/fource/.gradle/caches/transforms-3/6997e79772870a03479846901546e16c/transformed/core-1.12.0/AndroidManifest.xml:24:9-44
+36
+37    <uses-permission android:name="com.topster.tv.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION" />
+37-->[androidx.core:core:1.12.0] /home/fource/.gradle/caches/transforms-3/6997e79772870a03479846901546e16c/transformed/core-1.12.0/AndroidManifest.xml:26:5-97
+37-->[androidx.core:core:1.12.0] /home/fource/.gradle/caches/transforms-3/6997e79772870a03479846901546e16c/transformed/core-1.12.0/AndroidManifest.xml:26:22-94
+38
+39    <application
+39-->/home/fource/gobster/lobster/topster/tv/android/app/src/main/AndroidManifest.xml:26:5-68:19
+40        android:name="com.topster.tv.TopsterApplication"
+40-->/home/fource/gobster/lobster/topster/tv/android/app/src/main/AndroidManifest.xml:27:9-43
+41        android:allowBackup="true"
+41-->/home/fource/gobster/lobster/topster/tv/android/app/src/main/AndroidManifest.xml:28:9-35
+42        android:appComponentFactory="androidx.core.app.CoreComponentFactory"
+42-->[androidx.core:core:1.12.0] /home/fource/.gradle/caches/transforms-3/6997e79772870a03479846901546e16c/transformed/core-1.12.0/AndroidManifest.xml:28:18-86
+43        android:banner="@drawable/app_banner"
+43-->/home/fource/gobster/lobster/topster/tv/android/app/src/main/AndroidManifest.xml:30:9-46
+44        android:debuggable="true"
+45        android:extractNativeLibs="true"
+46        android:hardwareAccelerated="true"
+46-->/home/fource/gobster/lobster/topster/tv/android/app/src/main/AndroidManifest.xml:33:9-43
+47        android:icon="@mipmap/ic_launcher"
+47-->/home/fource/gobster/lobster/topster/tv/android/app/src/main/AndroidManifest.xml:29:9-43
+48        android:label="@string/app_name"
+48-->/home/fource/gobster/lobster/topster/tv/android/app/src/main/AndroidManifest.xml:31:9-41
+49        android:supportsRtl="true"
+49-->/home/fource/gobster/lobster/topster/tv/android/app/src/main/AndroidManifest.xml:34:9-35
+50        android:theme="@style/Theme.Topster" >
+50-->/home/fource/gobster/lobster/topster/tv/android/app/src/main/AndroidManifest.xml:32:9-45
+51
+52        <!-- Splash screen activity -->
+53        <activity
+53-->/home/fource/gobster/lobster/topster/tv/android/app/src/main/AndroidManifest.xml:37:9-46:20
+54            android:name="com.topster.tv.SplashActivity"
+54-->/home/fource/gobster/lobster/topster/tv/android/app/src/main/AndroidManifest.xml:38:13-43
+55            android:exported="true"
+55-->/home/fource/gobster/lobster/topster/tv/android/app/src/main/AndroidManifest.xml:39:13-36
+56            android:screenOrientation="landscape"
+56-->/home/fource/gobster/lobster/topster/tv/android/app/src/main/AndroidManifest.xml:40:13-50
+57            android:theme="@style/Theme.Splash" >
+57-->/home/fource/gobster/lobster/topster/tv/android/app/src/main/AndroidManifest.xml:41:13-48
+58            <intent-filter>
+58-->/home/fource/gobster/lobster/topster/tv/android/app/src/main/AndroidManifest.xml:42:13-45:29
+59                <action android:name="android.intent.action.MAIN" />
+59-->/home/fource/gobster/lobster/topster/tv/android/app/src/main/AndroidManifest.xml:43:17-69
+59-->/home/fource/gobster/lobster/topster/tv/android/app/src/main/AndroidManifest.xml:43:25-66
+60
+61                <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
+61-->/home/fource/gobster/lobster/topster/tv/android/app/src/main/AndroidManifest.xml:44:17-86
+61-->/home/fource/gobster/lobster/topster/tv/android/app/src/main/AndroidManifest.xml:44:27-83
+62            </intent-filter>
+63        </activity>
+64
+65        <!-- Main activity - TV launcher entry point -->
+66        <activity
+66-->/home/fource/gobster/lobster/topster/tv/android/app/src/main/AndroidManifest.xml:49:9-55:49
+67            android:name="com.topster.tv.MainActivity"
+67-->/home/fource/gobster/lobster/topster/tv/android/app/src/main/AndroidManifest.xml:50:13-41
+68            android:configChanges="keyboard|keyboardHidden|navigation"
+68-->/home/fource/gobster/lobster/topster/tv/android/app/src/main/AndroidManifest.xml:53:13-71
+69            android:exported="false"
+69-->/home/fource/gobster/lobster/topster/tv/android/app/src/main/AndroidManifest.xml:51:13-37
+70            android:resizeableActivity="true"
+70-->/home/fource/gobster/lobster/topster/tv/android/app/src/main/AndroidManifest.xml:55:13-46
+71            android:screenOrientation="landscape"
+71-->/home/fource/gobster/lobster/topster/tv/android/app/src/main/AndroidManifest.xml:52:13-50
+72            android:supportsPictureInPicture="true" />
+72-->/home/fource/gobster/lobster/topster/tv/android/app/src/main/AndroidManifest.xml:54:13-52
+73
+74        <!-- FileProvider for sharing APK files -->
+75        <provider
+76            android:name="androidx.core.content.FileProvider"
+76-->/home/fource/gobster/lobster/topster/tv/android/app/src/main/AndroidManifest.xml:59:13-62
+77            android:authorities="com.topster.tv.fileprovider"
+77-->/home/fource/gobster/lobster/topster/tv/android/app/src/main/AndroidManifest.xml:60:13-64
+78            android:exported="false"
+78-->/home/fource/gobster/lobster/topster/tv/android/app/src/main/AndroidManifest.xml:61:13-37
+79            android:grantUriPermissions="true" >
+79-->/home/fource/gobster/lobster/topster/tv/android/app/src/main/AndroidManifest.xml:62:13-47
+80            <meta-data
+80-->/home/fource/gobster/lobster/topster/tv/android/app/src/main/AndroidManifest.xml:63:13-65:54
+81                android:name="android.support.FILE_PROVIDER_PATHS"
+81-->/home/fource/gobster/lobster/topster/tv/android/app/src/main/AndroidManifest.xml:64:17-67
+82                android:resource="@xml/file_paths" />
+82-->/home/fource/gobster/lobster/topster/tv/android/app/src/main/AndroidManifest.xml:65:17-51
+83        </provider>
+84
+85        <activity
+85-->[androidx.compose.ui:ui-tooling-android:1.6.0-alpha07] /home/fource/.gradle/caches/transforms-3/5bd07aab16b2f5d56b1d8d0b8a9e5240/transformed/ui-tooling-release/AndroidManifest.xml:23:9-25:39
+86            android:name="androidx.compose.ui.tooling.PreviewActivity"
+86-->[androidx.compose.ui:ui-tooling-android:1.6.0-alpha07] /home/fource/.gradle/caches/transforms-3/5bd07aab16b2f5d56b1d8d0b8a9e5240/transformed/ui-tooling-release/AndroidManifest.xml:24:13-71
+87            android:exported="true" />
+87-->[androidx.compose.ui:ui-tooling-android:1.6.0-alpha07] /home/fource/.gradle/caches/transforms-3/5bd07aab16b2f5d56b1d8d0b8a9e5240/transformed/ui-tooling-release/AndroidManifest.xml:25:13-36
+88
+89        <provider
+89-->[androidx.emoji2:emoji2:1.3.0] /home/fource/.gradle/caches/transforms-3/c9578c35b82e8e99667d9aa65cb1fcf3/transformed/emoji2-1.3.0/AndroidManifest.xml:24:9-32:20
+90            android:name="androidx.startup.InitializationProvider"
+90-->[androidx.emoji2:emoji2:1.3.0] /home/fource/.gradle/caches/transforms-3/c9578c35b82e8e99667d9aa65cb1fcf3/transformed/emoji2-1.3.0/AndroidManifest.xml:25:13-67
+91            android:authorities="com.topster.tv.androidx-startup"
+91-->[androidx.emoji2:emoji2:1.3.0] /home/fource/.gradle/caches/transforms-3/c9578c35b82e8e99667d9aa65cb1fcf3/transformed/emoji2-1.3.0/AndroidManifest.xml:26:13-68
+92            android:exported="false" >
+92-->[androidx.emoji2:emoji2:1.3.0] /home/fource/.gradle/caches/transforms-3/c9578c35b82e8e99667d9aa65cb1fcf3/transformed/emoji2-1.3.0/AndroidManifest.xml:27:13-37
+93            <meta-data
+93-->[androidx.emoji2:emoji2:1.3.0] /home/fource/.gradle/caches/transforms-3/c9578c35b82e8e99667d9aa65cb1fcf3/transformed/emoji2-1.3.0/AndroidManifest.xml:29:13-31:52
+94                android:name="androidx.emoji2.text.EmojiCompatInitializer"
+94-->[androidx.emoji2:emoji2:1.3.0] /home/fource/.gradle/caches/transforms-3/c9578c35b82e8e99667d9aa65cb1fcf3/transformed/emoji2-1.3.0/AndroidManifest.xml:30:17-75
+95                android:value="androidx.startup" />
+95-->[androidx.emoji2:emoji2:1.3.0] /home/fource/.gradle/caches/transforms-3/c9578c35b82e8e99667d9aa65cb1fcf3/transformed/emoji2-1.3.0/AndroidManifest.xml:31:17-49
+96            <meta-data
+96-->[androidx.lifecycle:lifecycle-process:2.6.2] /home/fource/.gradle/caches/transforms-3/ee30897bc1beeaf9ad26a95eae4fec0d/transformed/lifecycle-process-2.6.2/AndroidManifest.xml:29:13-31:52
+97                android:name="androidx.lifecycle.ProcessLifecycleInitializer"
+97-->[androidx.lifecycle:lifecycle-process:2.6.2] /home/fource/.gradle/caches/transforms-3/ee30897bc1beeaf9ad26a95eae4fec0d/transformed/lifecycle-process-2.6.2/AndroidManifest.xml:30:17-78
+98                android:value="androidx.startup" />
+98-->[androidx.lifecycle:lifecycle-process:2.6.2] /home/fource/.gradle/caches/transforms-3/ee30897bc1beeaf9ad26a95eae4fec0d/transformed/lifecycle-process-2.6.2/AndroidManifest.xml:31:17-49
+99            <meta-data
+99-->[androidx.profileinstaller:profileinstaller:1.3.1] /home/fource/.gradle/caches/transforms-3/b6108335cf83c0b411263997641f92a5/transformed/profileinstaller-1.3.1/AndroidManifest.xml:29:13-31:52
+100                android:name="androidx.profileinstaller.ProfileInstallerInitializer"
+100-->[androidx.profileinstaller:profileinstaller:1.3.1] /home/fource/.gradle/caches/transforms-3/b6108335cf83c0b411263997641f92a5/transformed/profileinstaller-1.3.1/AndroidManifest.xml:30:17-85
+101                android:value="androidx.startup" />
+101-->[androidx.profileinstaller:profileinstaller:1.3.1] /home/fource/.gradle/caches/transforms-3/b6108335cf83c0b411263997641f92a5/transformed/profileinstaller-1.3.1/AndroidManifest.xml:31:17-49
+102        </provider>
+103
+104        <service
+104-->[androidx.room:room-runtime:2.6.1] /home/fource/.gradle/caches/transforms-3/6eef28adb95e657e8682cc1b0d8a66fa/transformed/room-runtime-2.6.1/AndroidManifest.xml:24:9-28:63
+105            android:name="androidx.room.MultiInstanceInvalidationService"
+105-->[androidx.room:room-runtime:2.6.1] /home/fource/.gradle/caches/transforms-3/6eef28adb95e657e8682cc1b0d8a66fa/transformed/room-runtime-2.6.1/AndroidManifest.xml:25:13-74
+106            android:directBootAware="true"
+106-->[androidx.room:room-runtime:2.6.1] /home/fource/.gradle/caches/transforms-3/6eef28adb95e657e8682cc1b0d8a66fa/transformed/room-runtime-2.6.1/AndroidManifest.xml:26:13-43
+107            android:exported="false" />
+107-->[androidx.room:room-runtime:2.6.1] /home/fource/.gradle/caches/transforms-3/6eef28adb95e657e8682cc1b0d8a66fa/transformed/room-runtime-2.6.1/AndroidManifest.xml:27:13-37
+108
+109        <receiver
+109-->[androidx.profileinstaller:profileinstaller:1.3.1] /home/fource/.gradle/caches/transforms-3/b6108335cf83c0b411263997641f92a5/transformed/profileinstaller-1.3.1/AndroidManifest.xml:34:9-52:20
+110            android:name="androidx.profileinstaller.ProfileInstallReceiver"
+110-->[androidx.profileinstaller:profileinstaller:1.3.1] /home/fource/.gradle/caches/transforms-3/b6108335cf83c0b411263997641f92a5/transformed/profileinstaller-1.3.1/AndroidManifest.xml:35:13-76
+111            android:directBootAware="false"
+111-->[androidx.profileinstaller:profileinstaller:1.3.1] /home/fource/.gradle/caches/transforms-3/b6108335cf83c0b411263997641f92a5/transformed/profileinstaller-1.3.1/AndroidManifest.xml:36:13-44
+112            android:enabled="true"
+112-->[androidx.profileinstaller:profileinstaller:1.3.1] /home/fource/.gradle/caches/transforms-3/b6108335cf83c0b411263997641f92a5/transformed/profileinstaller-1.3.1/AndroidManifest.xml:37:13-35
+113            android:exported="true"
+113-->[androidx.profileinstaller:profileinstaller:1.3.1] /home/fource/.gradle/caches/transforms-3/b6108335cf83c0b411263997641f92a5/transformed/profileinstaller-1.3.1/AndroidManifest.xml:38:13-36
+114            android:permission="android.permission.DUMP" >
+114-->[androidx.profileinstaller:profileinstaller:1.3.1] /home/fource/.gradle/caches/transforms-3/b6108335cf83c0b411263997641f92a5/transformed/profileinstaller-1.3.1/AndroidManifest.xml:39:13-57
+115            <intent-filter>
+115-->[androidx.profileinstaller:profileinstaller:1.3.1] /home/fource/.gradle/caches/transforms-3/b6108335cf83c0b411263997641f92a5/transformed/profileinstaller-1.3.1/AndroidManifest.xml:40:13-42:29
+116                <action android:name="androidx.profileinstaller.action.INSTALL_PROFILE" />
+116-->[androidx.profileinstaller:profileinstaller:1.3.1] /home/fource/.gradle/caches/transforms-3/b6108335cf83c0b411263997641f92a5/transformed/profileinstaller-1.3.1/AndroidManifest.xml:41:17-91
+116-->[androidx.profileinstaller:profileinstaller:1.3.1] /home/fource/.gradle/caches/transforms-3/b6108335cf83c0b411263997641f92a5/transformed/profileinstaller-1.3.1/AndroidManifest.xml:41:25-88
+117            </intent-filter>
+118            <intent-filter>
+118-->[androidx.profileinstaller:profileinstaller:1.3.1] /home/fource/.gradle/caches/transforms-3/b6108335cf83c0b411263997641f92a5/transformed/profileinstaller-1.3.1/AndroidManifest.xml:43:13-45:29
+119                <action android:name="androidx.profileinstaller.action.SKIP_FILE" />
+119-->[androidx.profileinstaller:profileinstaller:1.3.1] /home/fource/.gradle/caches/transforms-3/b6108335cf83c0b411263997641f92a5/transformed/profileinstaller-1.3.1/AndroidManifest.xml:44:17-85
+119-->[androidx.profileinstaller:profileinstaller:1.3.1] /home/fource/.gradle/caches/transforms-3/b6108335cf83c0b411263997641f92a5/transformed/profileinstaller-1.3.1/AndroidManifest.xml:44:25-82
+120            </intent-filter>
+121            <intent-filter>
+121-->[androidx.profileinstaller:profileinstaller:1.3.1] /home/fource/.gradle/caches/transforms-3/b6108335cf83c0b411263997641f92a5/transformed/profileinstaller-1.3.1/AndroidManifest.xml:46:13-48:29
+122                <action android:name="androidx.profileinstaller.action.SAVE_PROFILE" />
+122-->[androidx.profileinstaller:profileinstaller:1.3.1] /home/fource/.gradle/caches/transforms-3/b6108335cf83c0b411263997641f92a5/transformed/profileinstaller-1.3.1/AndroidManifest.xml:47:17-88
+122-->[androidx.profileinstaller:profileinstaller:1.3.1] /home/fource/.gradle/caches/transforms-3/b6108335cf83c0b411263997641f92a5/transformed/profileinstaller-1.3.1/AndroidManifest.xml:47:25-85
+123            </intent-filter>
+124            <intent-filter>
+124-->[androidx.profileinstaller:profileinstaller:1.3.1] /home/fource/.gradle/caches/transforms-3/b6108335cf83c0b411263997641f92a5/transformed/profileinstaller-1.3.1/AndroidManifest.xml:49:13-51:29
+125                <action android:name="androidx.profileinstaller.action.BENCHMARK_OPERATION" />
+125-->[androidx.profileinstaller:profileinstaller:1.3.1] /home/fource/.gradle/caches/transforms-3/b6108335cf83c0b411263997641f92a5/transformed/profileinstaller-1.3.1/AndroidManifest.xml:50:17-95
+125-->[androidx.profileinstaller:profileinstaller:1.3.1] /home/fource/.gradle/caches/transforms-3/b6108335cf83c0b411263997641f92a5/transformed/profileinstaller-1.3.1/AndroidManifest.xml:50:25-92
+126            </intent-filter>
+127        </receiver>
+128    </application>
+129
+130</manifest>

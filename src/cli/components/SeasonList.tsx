@@ -11,18 +11,24 @@ interface SeasonListProps {
   seasons: Season[];
   onSelect: (season: Season) => void;
   onCancel?: () => void;
+  seasonProgress?: Record<number, { watched: number; total: number; percent: number }>;
 }
 
 export const SeasonList: React.FC<SeasonListProps> = ({
   seasons,
   onSelect,
   onCancel,
+  seasonProgress,
 }) => {
-  const selectItems = seasons.map((season) => ({
-    label: `📺 ${season.title}`,
-    value: season,
-    key: `season-${season.number}`,
-  }));
+  const selectItems = seasons.map((season) => {
+    const progress = seasonProgress?.[season.number];
+    const progressText = progress ? ` [${progress.watched}/${progress.total} episodes - ${progress.percent.toFixed(0)}%]` : '';
+    return {
+      label: `📺 ${season.title}${progressText}`,
+      value: season,
+      key: `season-${season.number}`,
+    };
+  });
 
   if (onCancel) {
     selectItems.push({

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { render } from 'ink';
-import { Box, Text, useApp } from 'ink';
+import { Box, Text, useApp, useInput } from 'ink';
 import { Header } from './components/Header.js';
 import { Menu } from './components/Menu.js';
 import { SearchInput } from './components/SearchInput.js';
@@ -11,8 +11,10 @@ import { HistoryList } from './components/HistoryList.js';
 import { LoadingSpinner } from './components/LoadingSpinner.js';
 import { StatusMessage } from './components/StatusMessage.js';
 import { Settings } from './components/Settings.js';
-import type { MediaItem } from '../core/types.js';
-import type { HistoryEntry } from '../modules/history/types.js';
+import { IMDbModal } from './components/IMDbModal.js';
+import { IMDbOnboarding, IMDbFeatureHint } from './components/IMDbOnboarding.js';
+import type { Filters } from './components/FilterBar.js';
+import type { MediaItem, HistoryEntry } from '../core/types.js';
 import { getDefaultProvider } from '../modules/scraper/index.js';
 import { getHistory } from '../modules/history/index.js';
 import { play } from '../modules/player/index.js';
@@ -20,6 +22,14 @@ import { downloadMedia } from '../modules/download/index.js';
 import { getDiscord } from '../modules/discord/index.js';
 import { getConfig } from '../core/config.js';
 import type { CommandContext } from './commands.js';
+import { lookupIMDbByTitle } from '../modules/imdb/index.js';
+import type { IMDbInfo } from '../modules/imdb/types.js';
+import {
+  needsIMDbOnboarding,
+  shouldShowIMDbHint,
+  completeIMDbOnboarding,
+  markIMDbFeatureShown
+} from '../modules/imdb/onboarding.js';
 import { writeFileSync, appendFileSync } from 'fs';
 import { homedir } from 'os';
 import { join } from 'path';
@@ -67,6 +77,12 @@ interface AppState {
   recentPage?: number;
   recentTotalPages?: number;
   historyEntries?: HistoryEntry[];
+  historyPage?: number;
+  historyTotal?: number;
+  historyHasMore?: boolean;
+  fromHistory?: boolean;
+  seasonProgress?: Record<number, { watched: number; total: number; percent: number }>;
+  episodeProgress?: Record<string, { position: string; percent: number; completed: boolean }>;
   selectedMedia?: MediaItem;
   seasons?: Season[];
   selectedSeason?: Season;
@@ -74,6 +90,13 @@ interface AppState {
   loadingMessage?: string;
   errorMessage?: string;
   breadcrumbs: string[];
+  showingIMDbModal?: boolean;
+  imdbInfo?: IMDbInfo;
+  imdbError?: string;
+  showingIMDbOnboarding?: boolean;
+  imdbOnboardingStep?: 'intro' | 'input';
+  showingIMDbHint?: boolean;
+  filters?: Filters;
 }
 
 const InkApp: React.FC<{ ctx: CommandContext }> = ({ ctx }) => {
@@ -86,13 +109,55 @@ const InkApp: React.FC<{ ctx: CommandContext }> = ({ ctx }) => {
   useEffect(() => {
     // Initialize log file
     debugLog('=== Topster TUI Started ===');
-  }, []);
+
+    // Check if we should show IMDb onboarding
+    if (needsIMDbOnboarding()) {
+      // Show onboarding on first media list view
+      const checkOnboarding = () => {
+        if (['search-results', 'trending', 'recent'].includes(state.screen) && !state.showingIMDbOnboarding) {
+          updateState({ showingIMDbOnboarding: true, imdbOnboardingStep: 'intro' });
+        }
+      };
+
+      // Delay slightly to let the screen render first
+      setTimeout(checkOnboarding, 500);
+    } else if (shouldShowIMDbHint()) {
+      // Show feature hint on first media list view if they have API key
+      const checkHint = () => {
+        if (['search-results', 'trending', 'recent'].includes(state.screen) && !state.showingIMDbHint) {
+          updateState({ showingIMDbHint: true });
+        }
+      };
+
+      setTimeout(checkHint, 500);
+    }
+  }, [state.screen]);
 
   const updateState = (updates: Partial<AppState>) => {
     setState(prev => ({ ...prev, ...updates }));
   };
 
   const handleBack = () => {
+    // If IMDb modal is showing, close it instead of going back
+    if (state.showingIMDbModal) {
+      updateState({ showingIMDbModal: false, imdbInfo: undefined, imdbError: undefined });
+      return;
+    }
+
+    // If IMDb onboarding is showing, close it
+    if (state.showingIMDbOnboarding) {
+      updateState({ showingIMDbOnboarding: false });
+      completeIMDbOnboarding(); // Mark as completed (skipped)
+      return;
+    }
+
+    // If IMDb hint is showing, close it
+    if (state.showingIMDbHint) {
+      updateState({ showingIMDbHint: false });
+      markIMDbFeatureShown();
+      return;
+    }
+
     const newBreadcrumbs = [...state.breadcrumbs];
     newBreadcrumbs.pop();
 
@@ -117,6 +182,93 @@ const InkApp: React.FC<{ ctx: CommandContext }> = ({ ctx }) => {
         breadcrumbs: ['Main Menu'],
       });
     }
+  };
+
+  const handleShowIMDbInfo = async (media: MediaItem) => {
+    try {
+      const searchQuery = `${media.title}${media.year ? ` (${media.year})` : ''}`;
+      debugLog(`Looking up IMDb info for: ${searchQuery}`);
+      updateState({ showingIMDbModal: true, imdbInfo: undefined, imdbError: undefined });
+
+      const info = await lookupIMDbByTitle(media.title, media.year);
+      debugLog(`Found IMDb info: ${info.Title} (${info.Year}) - ${info.imdbID}`);
+
+      updateState({ imdbInfo: info });
+    } catch (error) {
+      debugLog(`IMDb lookup error: ${error}`);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      updateState({ imdbError: errorMessage });
+    }
+  };
+
+  // Handle ESC key globally
+  useInput((input, key) => {
+    if (key.escape) {
+      handleBack();
+    }
+
+    // Handle IMDb onboarding progression
+    if (state.showingIMDbOnboarding && state.imdbOnboardingStep === 'intro' && key.return) {
+      updateState({ imdbOnboardingStep: 'input' });
+    }
+
+    // Handle IMDb hint dismissal
+    if (state.showingIMDbHint && !key.escape) {
+      updateState({ showingIMDbHint: false });
+      markIMDbFeatureShown();
+    }
+  });
+
+  const handleIMDbOnboardingComplete = (apiKey: string) => {
+    config.set('omdbApiKey', apiKey);
+    completeIMDbOnboarding();
+    updateState({
+      showingIMDbOnboarding: false,
+      showingIMDbHint: true // Show hint after setup
+    });
+  };
+
+  const handleIMDbOnboardingSkip = () => {
+    completeIMDbOnboarding();
+    updateState({ showingIMDbOnboarding: false });
+  };
+
+  const handleToggleFilter = (filterType: string) => {
+    const currentFilters = state.filters || {};
+
+    switch (filterType) {
+      case 'movies':
+        updateState({
+          filters: {
+            ...currentFilters,
+            type: currentFilters.type === 'movie' ? undefined : 'movie',
+          },
+        });
+        break;
+      case 'tv':
+        updateState({
+          filters: {
+            ...currentFilters,
+            type: currentFilters.type === 'tv' ? undefined : 'tv',
+          },
+        });
+        break;
+      case 'hd':
+        const hdQualities = ['HD', '4K', '1080p', '720p'];
+        updateState({
+          filters: {
+            ...currentFilters,
+            quality: currentFilters.quality?.length ? undefined : hdQualities,
+          },
+        });
+        break;
+      default:
+        break;
+    }
+  };
+
+  const handleClearFilters = () => {
+    updateState({ filters: undefined });
   };
 
   const handleSearch = async (query: string, page: number = 1) => {
@@ -177,11 +329,14 @@ const InkApp: React.FC<{ ctx: CommandContext }> = ({ ctx }) => {
     }
   };
 
-  const handleHistory = async () => {
-    const entries = history.getIncomplete();
+  const handleHistory = async (page: number = 0) => {
+    const result = await history.getGroupedHistory(10, page * 10);
     updateState({
       screen: 'history',
-      historyEntries: entries,
+      historyEntries: result.entries,
+      historyPage: page,
+      historyTotal: result.total,
+      historyHasMore: result.hasMore,
       breadcrumbs: [...state.breadcrumbs, 'Continue Watching'],
     });
   };
@@ -216,7 +371,8 @@ const InkApp: React.FC<{ ctx: CommandContext }> = ({ ctx }) => {
 
   const handleSelectHistory = async (entry: HistoryEntry) => {
     try {
-      debugLog(`Resume from history: ${entry.title}`);
+      debugLog(`Selected from history: ${entry.title} (${entry.type})`);
+
       const media: MediaItem = {
         id: entry.id,
         title: entry.title,
@@ -224,21 +380,66 @@ const InkApp: React.FC<{ ctx: CommandContext }> = ({ ctx }) => {
         url: entry.url,
       };
 
-      updateState({ screen: 'loading', loadingMessage: 'Loading video...' });
-      exit();
-
-      if (entry.episodeId) {
-        const episode: Episode = {
-          id: entry.episodeId,
-          number: entry.episodeNumber ?? 1,
-          title: entry.episodeTitle ?? '',
-        };
-        await playMedia(media, episode, entry.seasonNumber, ctx, exit);
-      } else {
+      if (entry.type === 'movie') {
+        // For movies, play directly
+        updateState({ screen: 'loading', loadingMessage: 'Loading video...' });
+        exit();
         await playMedia(media, undefined, undefined, ctx, exit);
+      } else {
+        // For TV shows, navigate to seasons
+        updateState({
+          screen: 'loading',
+          loadingMessage: 'Loading seasons...',
+          breadcrumbs: [...state.breadcrumbs, media.title],
+          fromHistory: true,
+          selectedMedia: media,
+        });
+
+        const seasons = await provider.getSeasons(media.id);
+
+        // Calculate season progress if coming from history
+        let seasonProgress: Record<number, { watched: number; total: number; percent: number }> | undefined;
+        if (state.fromHistory) {
+          seasonProgress = {};
+          const allHistory = await history.getAll();
+
+          // Group episodes by season and calculate progress
+          const seasonStats = new Map<number, { watched: number; total: number }>();
+
+          for (const entry of allHistory) {
+            if (entry.id === media.id && entry.type === 'tv' && entry.seasonNumber) {
+              const season = entry.seasonNumber;
+              if (!seasonStats.has(season)) {
+                seasonStats.set(season, { watched: 0, total: 0 });
+              }
+              seasonStats.get(season)!.total++;
+              if (entry.completed) {
+                seasonStats.get(season)!.watched++;
+              }
+            }
+          }
+
+          // Convert to progress format
+          for (const [seasonNum, stats] of seasonStats) {
+            const percent = stats.total > 0 ? (stats.watched / stats.total) * 100 : 0;
+            seasonProgress[seasonNum] = {
+              watched: stats.watched,
+              total: stats.total,
+              percent,
+            };
+          }
+        }
+
+        updateState({
+          screen: 'season-select',
+          seasons,
+          selectedMedia: media,
+          fromHistory: true,
+          seasonProgress,
+        });
       }
     } catch (error) {
-      debugLog(`History playback error: ${error}`);
+      debugLog(`History selection error: ${error}`);
       updateState({
         screen: 'error',
         errorMessage: error instanceof Error ? error.message : String(error),
@@ -250,10 +451,34 @@ const InkApp: React.FC<{ ctx: CommandContext }> = ({ ctx }) => {
     try {
       updateState({ screen: 'loading', loadingMessage: 'Loading episodes...', breadcrumbs: [...state.breadcrumbs, `Season ${season.number}`] });
       const episodes = await provider.getEpisodes(season.id);
+
+      // Calculate episode progress if coming from history
+      let episodeProgress: Record<string, { position: string; percent: number; completed: boolean }> | undefined;
+      if (state.fromHistory && state.selectedMedia) {
+        episodeProgress = {};
+        const allHistory = await history.getAll();
+
+        // Find progress for each episode in this season
+        for (const entry of allHistory) {
+          if (entry.id === state.selectedMedia.id &&
+              entry.type === 'tv' &&
+              entry.seasonNumber === season.number &&
+              entry.episodeNumber) {
+            const key = `s${season.number}e${entry.episodeNumber}`;
+            episodeProgress[key] = {
+              position: entry.position,
+              percent: entry.percentWatched,
+              completed: entry.completed,
+            };
+          }
+        }
+      }
+
       updateState({
         screen: 'episode-select',
         selectedSeason: season,
         episodes,
+        episodeProgress,
       });
     } catch (error) {
       updateState({
@@ -342,6 +567,10 @@ const InkApp: React.FC<{ ctx: CommandContext }> = ({ ctx }) => {
                 totalPages={state.searchTotalPages}
                 onNextPage={() => state.searchQuery && handleSearch(state.searchQuery, (state.searchPage || 1) + 1)}
                 onPrevPage={() => state.searchQuery && handleSearch(state.searchQuery, (state.searchPage || 1) - 1)}
+                onShowInfo={handleShowIMDbInfo}
+                filters={state.filters}
+                onClearFilters={handleClearFilters}
+                onToggleFilter={handleToggleFilter}
               />
             )}
           </>
@@ -362,6 +591,10 @@ const InkApp: React.FC<{ ctx: CommandContext }> = ({ ctx }) => {
                 totalPages={state.trendingTotalPages}
                 onNextPage={() => handleTrending((state.trendingPage || 1) + 1)}
                 onPrevPage={() => handleTrending((state.trendingPage || 1) - 1)}
+                onShowInfo={handleShowIMDbInfo}
+                filters={state.filters}
+                onClearFilters={handleClearFilters}
+                onToggleFilter={handleToggleFilter}
               />
             )}
           </>
@@ -382,6 +615,10 @@ const InkApp: React.FC<{ ctx: CommandContext }> = ({ ctx }) => {
                 totalPages={state.recentTotalPages}
                 onNextPage={() => handleRecent((state.recentPage || 1) + 1)}
                 onPrevPage={() => handleRecent((state.recentPage || 1) - 1)}
+                onShowInfo={handleShowIMDbInfo}
+                filters={state.filters}
+                onClearFilters={handleClearFilters}
+                onToggleFilter={handleToggleFilter}
               />
             )}
           </>
@@ -397,6 +634,11 @@ const InkApp: React.FC<{ ctx: CommandContext }> = ({ ctx }) => {
                 entries={state.historyEntries}
                 onSelect={handleSelectHistory}
                 onCancel={handleBack}
+                currentPage={state.historyPage || 0}
+                totalEntries={state.historyTotal || 0}
+                hasMore={state.historyHasMore || false}
+                onNextPage={() => handleHistory((state.historyPage || 0) + 1)}
+                onPrevPage={() => handleHistory((state.historyPage || 0) - 1)}
               />
             )}
           </>
@@ -422,18 +664,19 @@ const InkApp: React.FC<{ ctx: CommandContext }> = ({ ctx }) => {
           <>
             <Header />
             <Breadcrumbs items={state.breadcrumbs} />
-            {state.seasons && state.selectedMedia && (
-              <>
-                <Box marginBottom={1}>
-                  <Text bold>{state.selectedMedia.title}</Text>
-                </Box>
-                <SeasonList
-                  seasons={state.seasons}
-                  onSelect={handleSelectSeason}
-                  onCancel={handleBack}
-                />
-              </>
-            )}
+             {state.seasons && state.selectedMedia && (
+               <>
+                 <Box marginBottom={1}>
+                   <Text bold>{state.selectedMedia.title}</Text>
+                 </Box>
+                 <SeasonList
+                   seasons={state.seasons}
+                   onSelect={handleSelectSeason}
+                   onCancel={handleBack}
+                   seasonProgress={state.seasonProgress}
+                 />
+               </>
+             )}
           </>
         );
 
@@ -447,12 +690,13 @@ const InkApp: React.FC<{ ctx: CommandContext }> = ({ ctx }) => {
                 <Box marginBottom={1}>
                   <Text bold>{state.selectedMedia.title}</Text>
                 </Box>
-                <EpisodeList
-                  episodes={state.episodes}
-                  seasonNumber={state.selectedSeason.number}
-                  onSelect={handleSelectEpisode}
-                  onCancel={handleBack}
-                />
+                 <EpisodeList
+                   episodes={state.episodes}
+                   seasonNumber={state.selectedSeason.number}
+                   onSelect={handleSelectEpisode}
+                   onCancel={handleBack}
+                   episodeProgress={state.episodeProgress}
+                 />
               </>
             )}
           </>
@@ -489,6 +733,89 @@ const InkApp: React.FC<{ ctx: CommandContext }> = ({ ctx }) => {
   return (
     <Box flexDirection="column" padding={1}>
       {renderScreen()}
+
+      {/* IMDb Info Modal */}
+      {state.showingIMDbModal && (
+        <Box
+          position="absolute"
+          width="100%"
+          height="100%"
+          justifyContent="center"
+          alignItems="center"
+          backgroundColor="black"
+        >
+          {state.imdbInfo ? (
+            <IMDbModal info={state.imdbInfo} onClose={handleBack} />
+          ) : state.imdbError ? (
+            <Box
+              flexDirection="column"
+              borderStyle="double"
+              borderColor="red"
+              paddingX={3}
+              paddingY={1}
+              width={60}
+              backgroundColor="black"
+            >
+              <Text bold color="red">❌ Error loading IMDb info</Text>
+              <Box marginTop={1}>
+                <Text>{state.imdbError}</Text>
+              </Box>
+              <Box marginTop={1}>
+                <Text dimColor>Press ESC to close</Text>
+              </Box>
+            </Box>
+          ) : (
+            <Box
+              flexDirection="column"
+              borderStyle="double"
+              borderColor="cyan"
+              paddingX={3}
+              paddingY={1}
+              width={50}
+              backgroundColor="black"
+            >
+              <LoadingSpinner text="Loading IMDb info..." />
+            </Box>
+          )}
+        </Box>
+      )}
+
+      {/* IMDb Onboarding */}
+      {state.showingIMDbOnboarding && (
+        <Box
+          position="absolute"
+          width="100%"
+          height="100%"
+          justifyContent="center"
+          alignItems="center"
+          backgroundColor="black"
+        >
+          <IMDbOnboarding
+            step={state.imdbOnboardingStep}
+            onComplete={handleIMDbOnboardingComplete}
+            onSkip={handleIMDbOnboardingSkip}
+          />
+        </Box>
+      )}
+
+      {/* IMDb Feature Hint */}
+      {state.showingIMDbHint && (
+        <Box
+          position="absolute"
+          width="100%"
+          height="100%"
+          justifyContent="center"
+          alignItems="center"
+          backgroundColor="black"
+        >
+          <IMDbFeatureHint
+            onDismiss={() => {
+              updateState({ showingIMDbHint: false });
+              markIMDbFeatureShown();
+            }}
+          />
+        </Box>
+      )}
     </Box>
   );
 };
@@ -541,6 +868,11 @@ async function playMedia(
     debugLog(`Video URL: ${firstVideoInfo.url}`);
     debugLog(`Subtitles: ${firstVideoInfo.subtitles.length} available`);
 
+    // Get resume position from history (needed for dry run display)
+    const historyEntry = await history.get(media.id, episode?.id);
+    const startTime = historyEntry ? parseTime(historyEntry.position) : 0;
+    debugLog(`Resume position: ${startTime}s`);
+
     // Dry run mode - just show details
     if (ctx?.dryRun) {
       const seasonStr = seasonNumber?.toString().padStart(2, '0') ?? '01';
@@ -580,11 +912,6 @@ async function playMedia(
       );
     }
 
-    // Get resume position from history
-    const historyEntry = history.get(media.id, episode?.id);
-    const startTime = historyEntry ? parseTime(historyEntry.position) : 0;
-    debugLog(`Resume position: ${startTime}s`);
-
     if (ctx?.download) {
       debugLog('Download mode enabled');
       const result = await downloadMedia(
@@ -616,7 +943,7 @@ async function playMedia(
 
     // Create/update history entry
     const entry = history.createEntry(media, episode, seasonNumber);
-    history.add(entry);
+    await history.add(entry);
 
     // Play video
     const seasonStr = seasonNumber?.toString().padStart(2, '0') ?? '01';
@@ -641,8 +968,9 @@ async function playMedia(
 
     // Update history with final position
     if (result.position) {
-      history.update(media.id, episode?.id, result.position, '00:00:00');
-      debugLog(`Updated history position: ${result.position}`);
+      const duration = result.duration || '00:00:00';
+      await history.update(media.id, episode?.id, result.position, duration);
+      debugLog(`Updated history position: ${result.position}, duration: ${duration}`);
     }
 
     // Clear Discord RPC

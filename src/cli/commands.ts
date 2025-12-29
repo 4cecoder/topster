@@ -70,7 +70,7 @@ export async function recent(type: 'movie' | 'tv', ctx: CommandContext): Promise
 export async function continueWatching(ctx: CommandContext): Promise<void> {
   ui.printHeader('Continue Watching');
 
-  const entries = history.getIncomplete();
+  const entries = await history.getIncomplete();
   ui.printHistoryList(entries);
 
   if (entries.length === 0) return;
@@ -100,14 +100,14 @@ export async function continueWatching(ctx: CommandContext): Promise<void> {
 
 export async function showHistory(): Promise<void> {
   ui.printHeader('Watch History');
-  const entries = history.getAll();
+  const entries = await history.getAll();
   ui.printHistoryList(entries);
 }
 
 export async function clearHistory(): Promise<void> {
   const confirmed = await ui.confirm('Clear all watch history?');
   if (confirmed) {
-    history.clear();
+    await history.clear();
     ui.printSuccess('History cleared');
   }
 }
@@ -187,10 +187,10 @@ async function playMedia(
     }
 
     // Get resume position from history
-    const historyEntry = history.get(media.id, episode?.id);
+    const historyEntry = await history.get(media.id, episode?.id);
     const startTime = historyEntry ? parseTime(historyEntry.position) : 0;
 
-    // Dry run mode - just show details
+    // Dry run mode - just show details and test stream
     if (ctx?.dryRun) {
       const seasonStr = seasonNumber?.toString().padStart(2, '0') ?? '01';
       const title = episode
@@ -205,6 +205,7 @@ async function playMedia(
       console.log(`  URL: ${firstVideoInfo.url}`);
       console.log(`  Quality: ${firstVideoInfo.quality || 'auto'}`);
       console.log(`  Type: ${isEpisode ? 'Episode' : 'Movie'}`);
+      console.log(`  Referer: ${firstVideoInfo.referer || 'none'}`);
       console.log(`\nSubtitles: ${subtitles.length} available`);
       subtitles.slice(0, 5).forEach((sub, i) => {
         console.log(`  [${i + 1}] ${sub.lang} - ${sub.url}`);
@@ -214,7 +215,58 @@ async function playMedia(
       }
       console.log(`\nResume Position: ${formatTime(startTime)}`);
       console.log(`History Entry: ${historyEntry ? 'Yes' : 'No'}`);
+
+      // Test stream accessibility with curl
+      console.log('\n--- Testing Stream Accessibility ---');
+      const userAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
+
+      const curlArgs = [
+        '-I', // Head request
+        '-L', // Follow redirects
+        '-s', // Silent
+        '-w', '\\nHTTP Status: %{http_code}\\nContent-Type: %{content_type}\\n',
+        '-A', userAgent,
+      ];
+
+      if (firstVideoInfo.referer) {
+        curlArgs.push('-H', `Referer: ${firstVideoInfo.referer}`);
+      }
+
+      curlArgs.push(firstVideoInfo.url);
+
+      console.log(`\n$ curl ${curlArgs.join(' ')}`);
+
+      const { spawnSync } = require('child_process');
+      const curlResult = spawnSync('curl', curlArgs, {
+        encoding: 'utf8',
+        timeout: 10000
+      });
+
+      if (curlResult.error) {
+        console.log(`\n❌ Curl test failed: ${curlResult.error}`);
+      } else {
+        console.log('\nCurl Output:');
+        console.log(curlResult.stdout);
+        if (curlResult.stderr) {
+          console.log('Curl Errors:');
+          console.log(curlResult.stderr);
+        }
+      }
+
+      // Generate mpv command
+      console.log('\n--- MPV Command ---');
+      const { buildMpvArgs } = require('../modules/player');
+      const mpvArgs = buildMpvArgs(
+        firstVideoInfo.url,
+        { startTime: startTime > 60 ? startTime - 10 : 0, fullscreen: true },
+        subtitles,
+        firstVideoInfo.referer
+      );
+      console.log(`\nmpv ${mpvArgs.join(' ')}`);
+
       console.log('\n=== END DRY RUN ===\n');
+      console.log('💡 To test playback with full debug logging, run:');
+      console.log(`   DEBUG=1 topster [your-command]`);
       return;
     }
 
@@ -246,7 +298,7 @@ async function playMedia(
 
     // Create/update history entry
     const entry = history.createEntry(media, episode, seasonNumber);
-    history.add(entry);
+    await history.add(entry);
 
     // Play video
     const seasonStr = seasonNumber?.toString().padStart(2, '0') ?? '01';
@@ -266,9 +318,10 @@ async function playMedia(
       firstVideoInfo.referer
     );
 
-    // Update history with final position
+    // Update history with final position and duration
     if (result.position) {
-      history.update(media.id, episode?.id, result.position, '00:00:00');
+      const duration = result.duration || '00:00:00';
+      await history.update(media.id, episode?.id, result.position, duration);
     }
 
     // Clear Discord RPC

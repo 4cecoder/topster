@@ -2,11 +2,11 @@
 
 import type { MediaItem, Season, Episode, HistoryEntry, VideoSource } from '../core/types';
 import type { Provider } from '../modules/scraper';
-import type { HistoryManager } from '../modules/history';
+import type { SQLiteHistoryManager } from '../modules/history';
 
 // Lazy initialization - don't block server startup
 let _provider: Provider | null = null;
-let _history: HistoryManager | null = null;
+let _history: SQLiteHistoryManager | null = null;
 
 function getProvider(): Provider {
   if (!_provider) {
@@ -16,7 +16,7 @@ function getProvider(): Provider {
   return _provider;
 }
 
-function getHistoryManager(): HistoryManager {
+function getHistoryManager(): SQLiteHistoryManager {
   if (!_history) {
     const { getHistory } = require('../modules/history');
     _history = getHistory();
@@ -165,6 +165,32 @@ export const tools: ToolDefinition[] = [
       required: ['key', 'value'],
     },
   },
+  {
+    name: 'update_history',
+    description: 'Update watch history with playback position',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: {
+          type: 'string',
+          description: 'Media ID',
+        },
+        episode_id: {
+          type: 'string',
+          description: 'Episode ID (for TV shows)',
+        },
+        position: {
+          type: 'string',
+          description: 'Current playback position (HH:MM:SS format)',
+        },
+        duration: {
+          type: 'string',
+          description: 'Total video duration (HH:MM:SS format)',
+        },
+      },
+      required: ['id', 'position', 'duration'],
+    },
+  },
 ];
 
 export type ToolResult = {
@@ -221,9 +247,9 @@ export async function executeTool(
 
         let entries: HistoryEntry[];
         if (incompleteOnly) {
-          entries = history.getIncomplete();
+          entries = await history.getIncomplete();
         } else {
-          entries = limit ? history.getRecent(limit) : history.getAll();
+          entries = limit ? await history.getRecent(limit) : await history.getAll();
         }
         return success(entries);
       }
@@ -257,6 +283,17 @@ export async function executeTool(
 
         config.set(key as keyof typeof current, typedValue as never);
         return success({ key, value: typedValue, updated: true });
+      }
+
+      case 'update_history': {
+        const id = args.id as string;
+        const episodeId = args.episode_id as string | undefined;
+        const position = args.position as string;
+        const duration = args.duration as string;
+        const history = getHistoryManager();
+
+        await history.update(id, episodeId, position, duration);
+        return success({ updated: true });
       }
 
       default:

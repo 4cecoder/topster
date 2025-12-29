@@ -1,0 +1,35 @@
+# Bun configuration for Topster Web App
+
+[install]
+# Use exact versions for reproducible builds
+exact = true
+
+# Auto-install peer dependencies
+auto = true
+
+# Use global cache
+globalCache = true
+
+[install.scopes]
+# Configure package registry scopes if needed
+
+[run]
+# Enable Bun's shell for scripts
+shell = "bun"
+
+# Don't fall back to Node.js
+preferBun = true
+
+[test]
+# Use Bun's built-in test runner
+preload = []
+
+[build]
+# Target for builds
+target = "bun"
+
+# Source maps for debugging
+sourcemap = "external"
+
+# Minify production builds
+minify = true

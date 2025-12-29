@@ -286,6 +286,11 @@ export const Settings: React.FC<SettingsProps> = ({ config, onUpdate, onBack }) 
         value: 'debug',
         setting: { toggle: true },
       },
+      {
+        label: `OMDb API Key: ${config.omdbApiKey ? '***' + config.omdbApiKey.slice(-4) : 'Not set'}`,
+        value: 'omdbApiKey',
+        setting: { editable: true },
+      },
       { label: '← Back', value: 'back' },
     ];
 
@@ -302,7 +307,13 @@ export const Settings: React.FC<SettingsProps> = ({ config, onUpdate, onBack }) 
             if (item.value === 'back') {
               setCategory('main');
             } else {
-              onUpdate(item.value as SettingKey, !config[item.value as SettingKey]);
+              const setting = items.find(i => i.value === item.value)?.setting;
+              if (setting?.editable) {
+                setEditingKey(item.value as SettingKey);
+                setInputValue(String(config[item.value as SettingKey] || ''));
+              } else {
+                onUpdate(item.value as SettingKey, !config[item.value as SettingKey]);
+              }
             }
           }}
         />

@@ -12,6 +12,7 @@ interface EpisodeListProps {
   seasonNumber: number;
   onSelect: (episode: Episode) => void;
   onCancel?: () => void;
+  episodeProgress?: Record<string, { position: string; percent: number; completed: boolean }>;
 }
 
 export const EpisodeList: React.FC<EpisodeListProps> = ({
@@ -19,12 +20,21 @@ export const EpisodeList: React.FC<EpisodeListProps> = ({
   seasonNumber,
   onSelect,
   onCancel,
+  episodeProgress,
 }) => {
-  const selectItems = episodes.map((episode) => ({
-    label: `S${String(seasonNumber).padStart(2, '0')}E${String(episode.number).padStart(2, '0')} - ${episode.title}`,
-    value: episode,
-    key: `s${seasonNumber}e${episode.number}`,
-  }));
+  const selectItems = episodes.map((episode) => {
+    const progress = episodeProgress?.[`s${seasonNumber}e${episode.number}`];
+    const progressText = progress
+      ? progress.completed
+        ? ' ✓'
+        : ` [${progress.percent.toFixed(0)}%]`
+      : '';
+    return {
+      label: `S${String(seasonNumber).padStart(2, '0')}E${String(episode.number).padStart(2, '0')} - ${episode.title}${progressText}`,
+      value: episode,
+      key: `s${seasonNumber}e${episode.number}`,
+    };
+  });
 
   if (onCancel) {
     selectItems.push({

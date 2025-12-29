@@ -35,6 +35,9 @@ export interface TopsterConfig {
   // MCP settings
   mcpPort: number;
   mcpHost: string;
+
+  // API settings
+  omdbApiKey?: string;
 }
 
 // Detect the best default player based on platform
@@ -62,6 +65,7 @@ const DEFAULT_CONFIG: TopsterConfig = {
   previewWindowSize: 'right:60%:wrap',
   mcpPort: 3847,
   mcpHost: 'localhost',
+  omdbApiKey: undefined,
 };
 
 export class ConfigManager {

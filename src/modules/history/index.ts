@@ -1,166 +1,76 @@
-// History module - Watch history tracking
-
-import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'fs';
-import { dirname } from 'path';
-import type { HistoryEntry, MediaItem, Episode } from '../../core/types';
-import { HistoryError } from '../../core/errors';
+// History module - Watch history tracking with SQLite backend
+import { existsSync, readFileSync, unlinkSync, renameSync } from 'fs';
+import type { HistoryEntry } from '../../core/types';
 import { getConfig } from '../../core/config';
+import { getHistory as getSQLiteHistory, resetHistoryInstance } from './sqlite';
 
-const MAX_HISTORY_ENTRIES = 100;
+// Export the SQLite manager
+export { SQLiteHistoryManager } from './sqlite';
+export { getHistory, resetHistoryInstance } from './sqlite';
 
-export class HistoryManager {
-  private historyPath: string;
-  private entries: HistoryEntry[] = [];
+// Migration utility: converts old JSON history to SQLite
+export async function migrateFromJSON(): Promise<void> {
+  const config = getConfig();
+  const jsonPath = config.getHistoryPath();
+  const sqlitePath = `${config.getDataDir()}/history.db`;
 
-  constructor() {
-    this.historyPath = getConfig().getHistoryPath();
-    this.load();
+  // Check if JSON file exists and SQLite doesn't have data yet
+  if (!existsSync(jsonPath)) {
+    return; // Nothing to migrate
   }
 
-  private load(): void {
-    try {
-      if (existsSync(this.historyPath)) {
-        const data = readFileSync(this.historyPath, 'utf-8');
-        this.entries = JSON.parse(data);
-      }
-    } catch (error) {
-      console.error('Failed to load history:', error);
-      this.entries = [];
+  try {
+    // Read old JSON data
+    const jsonData = readFileSync(jsonPath, 'utf-8');
+    const entries: HistoryEntry[] = JSON.parse(jsonData);
+
+    if (entries.length === 0) {
+      console.log('No history entries to migrate');
+      return;
     }
-  }
 
-  private save(): void {
-    try {
-      const dir = dirname(this.historyPath);
-      if (!existsSync(dir)) {
-        mkdirSync(dir, { recursive: true });
-      }
-      writeFileSync(this.historyPath, JSON.stringify(this.entries, null, 2));
-    } catch (error) {
-      throw new HistoryError(`Failed to save history: ${error}`);
+    console.log(`Migrating ${entries.length} history entries from JSON to SQLite...`);
+
+    // Get SQLite manager
+    const history = getSQLiteHistory();
+
+    // Import each entry
+    for (const entry of entries) {
+      await history.add({
+        id: entry.id,
+        title: entry.title,
+        type: entry.type,
+        url: entry.url,
+        episodeId: entry.episodeId,
+        episodeTitle: entry.episodeTitle,
+        seasonNumber: entry.seasonNumber,
+        episodeNumber: entry.episodeNumber,
+        position: entry.position,
+        duration: entry.duration,
+        percentWatched: entry.percentWatched,
+        completed: entry.completed,
+      });
     }
+
+    console.log('Migration completed successfully!');
+
+    // Backup old JSON file
+    const backupPath = `${jsonPath}.backup`;
+    renameSync(jsonPath, backupPath);
+    console.log(`Old history backed up to: ${backupPath}`);
+  } catch (error) {
+    console.error('Failed to migrate history:', error);
+    throw error;
   }
+}
 
-  add(entry: Omit<HistoryEntry, 'lastWatched'>): void {
-    if (!getConfig().get('historyEnabled')) return;
-
-    const newEntry: HistoryEntry = {
-      ...entry,
-      lastWatched: new Date().toISOString(),
-    };
-
-    // Remove existing entry for same media
-    this.entries = this.entries.filter(e => {
-      if (entry.type === 'movie') {
-        return e.id !== entry.id;
-      }
-      // For TV shows, match by episode
-      return !(e.id === entry.id && e.episodeId === entry.episodeId);
+// Auto-migrate on first import if needed
+if (existsSync(getConfig().getHistoryPath())) {
+  const sqlitePath = `${getConfig().getDataDir()}/history.db`;
+  if (!existsSync(sqlitePath)) {
+    console.log('Detected old JSON history, migrating to SQLite...');
+    migrateFromJSON().catch(err => {
+      console.error('Auto-migration failed:', err);
     });
-
-    // Add new entry at the beginning
-    this.entries.unshift(newEntry);
-
-    // Limit history size
-    if (this.entries.length > MAX_HISTORY_ENTRIES) {
-      this.entries = this.entries.slice(0, MAX_HISTORY_ENTRIES);
-    }
-
-    this.save();
   }
-
-  update(id: string, episodeId: string | undefined, position: string, duration: string): void {
-    const entry = this.entries.find(e =>
-      e.id === id && e.episodeId === episodeId
-    );
-
-    if (entry) {
-      entry.position = position;
-      entry.duration = duration;
-      entry.lastWatched = new Date().toISOString();
-
-      // Calculate percent watched
-      const posSeconds = this.parseTime(position);
-      const durSeconds = this.parseTime(duration);
-      entry.percentWatched = durSeconds > 0 ? (posSeconds / durSeconds) * 100 : 0;
-      entry.completed = entry.percentWatched >= 90;
-
-      this.save();
-    }
-  }
-
-  get(id: string, episodeId?: string): HistoryEntry | undefined {
-    return this.entries.find(e =>
-      e.id === id && e.episodeId === episodeId
-    );
-  }
-
-  getAll(): HistoryEntry[] {
-    return [...this.entries];
-  }
-
-  getRecent(limit: number = 10): HistoryEntry[] {
-    return this.entries.slice(0, limit);
-  }
-
-  getIncomplete(): HistoryEntry[] {
-    return this.entries.filter(e => !e.completed && e.percentWatched > 5);
-  }
-
-  remove(id: string, episodeId?: string): void {
-    this.entries = this.entries.filter(e =>
-      !(e.id === id && e.episodeId === episodeId)
-    );
-    this.save();
-  }
-
-  clear(): void {
-    this.entries = [];
-    this.save();
-  }
-
-  createEntry(
-    media: MediaItem,
-    episode?: Episode,
-    seasonNumber?: number
-  ): Omit<HistoryEntry, 'lastWatched'> {
-    return {
-      id: media.id,
-      title: media.title,
-      type: media.type,
-      url: media.url,
-      episodeId: episode?.id,
-      episodeTitle: episode?.title,
-      seasonNumber,
-      episodeNumber: episode?.number,
-      position: '00:00:00',
-      duration: '00:00:00',
-      percentWatched: 0,
-      completed: false,
-    };
-  }
-
-  private parseTime(time: string): number {
-    const parts = time.split(':').map(Number);
-    if (parts.length === 3) {
-      return (parts[0] ?? 0) * 3600 + (parts[1] ?? 0) * 60 + (parts[2] ?? 0);
-    } else if (parts.length === 2) {
-      return (parts[0] ?? 0) * 60 + (parts[1] ?? 0);
-    }
-    return parts[0] ?? 0;
-  }
-}
-
-// Singleton instance
-let historyInstance: HistoryManager | null = null;
-
-export function getHistory(): HistoryManager {
-  if (!historyInstance) {
-    historyInstance = new HistoryManager();
-  }
-  return historyInstance;
-}
-
-export function resetHistoryInstance(): void {
-  historyInstance = null;
 }

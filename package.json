@@ -12,7 +12,9 @@
     "dev": "bun --watch run index.ts",
     "mcp": "bun run index.ts --mcp",
     "build": "bun build ./index.ts --outdir ./dist --target bun",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate"
   },
   "private": true,
   "devDependencies": {
