@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<lint>
+    <!-- Disable issues for Compose (following Android best practices) -->
+    <issue id="UnusedResources" severity="ignore" />
+
+    <!-- Allow specific Compose patterns -->
+    <issue id="ComposableNaming" severity="warning" />
+    <issue id="ComposableFunctionNaming" severity="warning" />
+
+    <!-- Allow emojis in strings for TV icons -->
+    <issue id="TypographyEllipsis" severity="ignore" />
+
+    <!-- Ignore API requirements for Android TV (minSdk 21 is fine) -->
+    <issue id="OldTargetApi" severity="ignore" />
+    <issue id="Deprecated" severity="warning" />
+
+    <!-- Vector drawables -->
+    <issue id="VectorPath" severity="warning" />
+
+    <!-- Hardcoded strings in test files are acceptable -->
+    <issue id="HardcodedText" severity="ignore">
+        <ignore path="test/.*" />
+    </issue>
+
+    <!-- Allow unused params in Compose (state management) -->
+    <issue id="UnusedParameter" severity="ignore">
+        <ignore path=".*\\.kt" />
+    </issue>
+
+    <!-- Ignore R class warnings (generated) -->
+    <issue id="RLog" severity="ignore" />
+
+    <!-- Allow experimental annotations -->
+    <issue id="ExperimentalAnnotation" severity="ignore" />
+
+    <!-- Media3 is still experimental in some versions -->
+    <issue id="ExperimentalClassUsage" severity="warning" />
+
+    <!-- Ignore resource naming for TV-specific resources -->
+    <issue id="ResourceName" severity="warning" />
+
+    <!-- Allow inline functions in Compose -->
+    <issue id="LambdaLast" severity="ignore" />
+
+    <!-- Ignore Compose recomposition warnings -->
+    <issue id="ComposableMutableParameters" severity="ignore" />
+
+    <!-- Allow multiple content providers in test -->
+    <issue id="ContentProviderRegisteredName" severity="ignore" />
+</lint>
