@@ -1,0 +1,90 @@
+# Detekt configuration for strict Kotlin code quality
+# Based on Android and Compose best practices
+
+build:
+  maxIssues: 0  # Fail build if any issues found
+  excludeCorrectable: false
+  warningsAsErrors: true  # Treat warnings as errors (strict mode)
+
+config:
+  # Active rule sets
+  active: standard,formatting,style,complexity,documentation
+
+  # Specific rule configurations
+  rules:
+    active:
+      # Code style
+      - comment-wrapping
+      - comment-spacing
+      - end-of-line-format
+      - no-wildcard-imports
+      - import-ordering
+
+      # Formatting
+      - filename
+      - indent
+      - max-line-length
+
+      # Complexity
+      - complex-condition
+      - long-method
+      - long-parameter-list
+      - nested-classes-depth
+
+      # Style
+      - magic-number
+      - naming:
+          function-name:
+            active: true
+            pattern: '[a-zA-Z][a-zA-Z0-9]*'
+
+          class-name:
+            active: true
+            pattern: '[A-Z][a-zA-Z0-9]*'
+
+      # Code quality
+      - no-console-println
+      - return-count
+      - throw-count
+      - too-many-functions
+      - unsafe-call
+
+  # Exclusions for generated files or Android-specific patterns
+  excludes:
+    - '**/build/**'
+    - '**/generated/**'
+    - '**/test/**'
+    - '**/androidTest/**'
+
+  # Additional ignores for Compose (as recommended in official docs)
+  ignoreAnnotated:
+    - 'androidx.compose.*'
+
+  # Input files
+  input:
+    paths:
+      - 'src/main/java/**/*.kt'
+
+  # Reporter configuration
+  reporters:
+    console:
+      active: true
+
+    html:
+      active: true
+      output:
+        path: 'build/reports/detekt/'
+        reportName: 'detekt-report.html'
+
+    xml:
+      active: true
+      output:
+        path: 'build/reports/detekt/'
+        reportName: 'detekt-report.xml'
+
+# Severity thresholds
+complexity:
+  threshold: 15  # Warn on functions with complexity > 15
+
+style:
+  threshold: 15  # Warn on classes with style issues

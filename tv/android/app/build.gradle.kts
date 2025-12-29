@@ -173,12 +173,58 @@ dependencies {
     debugImplementation("androidx.compose.ui:ui-test-manifest:1.5.4")
 }
 
-// Configure test options
-android {
-    testOptions {
-        unitTests {
-            isIncludeAndroidResources = true
-            isReturnDefaultValues = true
+ // Configure test options
+    android {
+        testOptions {
+            unitTests {
+                isIncludeAndroidResources = true
+                isReturnDefaultValues = true
+            }
+        }
+
+        // Lint configuration - STRICT
+        lint {
+            checkDependencies = true
+            checkTestSources = true
+            abortOnError = true
+            warningsAsErrors = true
+            absolutePaths = false
+            checkAllWarnings = true
+
+            // Disable issues we intentionally ignore
+            disable += [
+                "TypographyEllipsis",
+                "OldTargetApi",
+                "ExpiredTargetSdkVersion",
+                "ContentDescription",
+            ]
+
+            // Enable additional checks
+            enable += [
+                "UnusedResources",
+                "Overdraw",
+                "VectorPath",
+                "RLog",
+                "RestrictedApi",
+                "KotlinConstantConditions",
+            ]
+
+            // Configure output
+            htmlReport = true
+            xmlReport = true
+            htmlOutput = file("${project.buildDir}/reports/lint-results.html")
+            xmlOutput = file("${project.buildDir}/reports/lint-results.xml")
+        }
+
+        // Kotlin code quality with Detekt
+        detekt {
+            buildUponDefaultConfig = true
+            allRules = false
+
+            config.setFrom("$projectDir/config/detekt/detekt.yml")
+
+            reportsDir = file("$buildDir/reports/detekt")
+            outputToSout = true
         }
     }
 }
