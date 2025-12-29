@@ -28,13 +28,43 @@ bun run preview          # Preview production build
 ```
 
 ### Android TV Application
-**LSP & Linting**: Kotlin Language Server, Android Lint, Detekt
 ```bash
 cd tv/android
+
+# Run unit tests (stable variant)
 ./gradlew testStableDebugUnitTest --stacktrace
+
+# Run unit tests (beta variant)
+./gradlew testBetaDebugUnitTest --stacktrace
+
+# Run Android lint (stable variant)
 ./gradlew lintStableDebug --stacktrace
+
+# Run Android lint (beta variant)
+./gradlew lintBetaDebug --stacktrace
+
+# Run Detekt (Kotlin code quality)
+./gradlew detektStableDebug
+./gradlew detektBetaDebug
+
+# Build debug APK
 ./gradlew assembleStableDebug
+
+# Build debug APK for testing
+./gradlew assembleBetaDebug
+
+# Build release APK
+./gradlew assembleStableRelease
+
+# Run instrumented tests (requires connected device/emulator)
+./gradlew connectedStableDebugAndroidTest
 ```
+
+**Android TV Features:**
+- **Filtering**: Media filtering by type (Movies/TV Shows), year range, quality
+- **History**: Hierarchical navigation with grouped shows, season/episode drill-down
+- **Player**: Compose-based with customizable controls (See ComposePlayerScreen.kt)
+- **Settings**: PlayerSettingsScreen.kt for button configuration
 
 ### General
 ```bash
