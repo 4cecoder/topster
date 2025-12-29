@@ -39,3 +39,9 @@ share/
 *.db
 *.db-*
 history.json
+
+# Android build artifacts
+tv/android/app/build/
+tv/android/.gradle/
+*.apk
+*.aab
